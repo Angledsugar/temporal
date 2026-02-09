@@ -1,0 +1,22 @@
+# Deployment: VLM + Action Expert + MetaController + RL Policy
+
+vlm:
+  provider: "google"           # google / openai / local
+  model: "gemini-pro"          # or gemma-3, gpt-4o
+  temperature: 0.3
+  max_subtasks: 20
+
+action_expert:
+  checkpoint: "checkpoints/phase1/action_expert.pt"
+
+metacontroller:
+  checkpoint: "checkpoints/phase2/metacontroller.pt"
+
+rl_policy:
+  checkpoint: "checkpoints/phase3/rl_policy.pt"
+
+execution:
+  beta_threshold: 0.5
+  max_steps_per_subtask: 200
+  replan_on_failure: true
+  max_replan_attempts: 3

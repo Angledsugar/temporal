@@ -1,0 +1,55 @@
+# Phase 1: Action Expert Pretraining on Human Motion Data
+# Train Gemma-300M with flow-matching on human manipulation data.
+# After this phase, theta is FROZEN for all subsequent phases.
+
+model:
+  variant: "gemma_300m"       # width=1024, depth=18, mlp_dim=4096
+  width: 1024
+  depth: 18
+  mlp_dim: 4096
+  num_heads: 8
+  num_kv_heads: 1
+  head_dim: 256
+
+flow_matching:
+  num_steps: 10               # K denoising steps at inference
+  sigma_min: 0.001
+  solver: "euler"
+
+data:
+  datasets:
+    - name: "something_something_v2"
+      path: "/data/ssv2/"
+      weight: 0.4
+    - name: "ego4d_hand"
+      path: "/data/ego4d/"
+      weight: 0.4
+    - name: "unihand"
+      path: "/data/unihand/"
+      weight: 0.2
+  action_representation: "canonical_ee"  # position + orientation + gripper
+  action_chunk_size: 50                  # H = 50 steps per chunk (~1 second)
+  target_fps: 50
+
+retargeting:
+  source: "human_hand_mano"
+  target: "canonical_ee_7dof"            # xyz + quat + gripper
+  method: "fingertip_to_ee"
+
+training:
+  batch_size: 256
+  learning_rate: 3.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_steps: 500000
+  optimizer: "adamw"
+  grad_clip: 1.0
+  dtype: "bfloat16"
+
+  checkpoint:
+    save_every: 10000
+    output_dir: "checkpoints/phase1/"
+
+logging:
+  wandb_project: "temporal-phase1"
+  log_every: 100

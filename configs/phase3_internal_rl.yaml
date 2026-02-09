@@ -1,0 +1,44 @@
+# Phase 3: Internal RL for Subtask Granularity Optimisation
+# RL policy operates in controller-code space z_t.
+# Action expert + MetaController decoder are frozen.
+
+action_expert:
+  checkpoint: "checkpoints/phase1/action_expert.pt"
+  frozen: true
+
+metacontroller:
+  checkpoint: "checkpoints/phase2/metacontroller.pt"
+  frozen: true                 # only decoder is used
+
+rl_policy:
+  type: "causal_gru"
+  hidden_size: 256
+  n_z: 32                     # must match metacontroller.n_z
+
+internal_env:
+  beta_threshold: 0.5         # binarise switching gate
+  max_primitive_steps_per_z: 50
+  sim_env: "simpler"          # or "maniskill3"
+
+  # Reward definition
+  reward:
+    type: "sparse_binary"     # r=1 on subtask success, 0 otherwise
+    success_threshold: 0.05   # position error threshold for success
+
+training:
+  algorithm: "reinforce"      # policy gradient with relative advantage
+  learning_rate: 3.0e-4
+  gamma: 0.99
+  max_episodes: 100000
+  max_steps_per_episode: 200  # in terms of z_t decisions (not primitive steps)
+  baseline: "relative_advantage"
+
+  checkpoint:
+    save_every: 5000
+    output_dir: "checkpoints/phase3/"
+
+logging:
+  wandb_project: "temporal-phase3"
+  log_every: 50
+  eval_every: 1000
+  eval_episodes: 100

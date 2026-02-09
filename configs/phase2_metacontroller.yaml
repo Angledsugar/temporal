@@ -1,0 +1,48 @@
+# Phase 2: MetaController Self-Supervised Training
+# Train MetaController on frozen action expert's residual stream.
+# Discovers subtask boundaries (beta_t) without supervision.
+
+action_expert:
+  checkpoint: "checkpoints/phase1/action_expert.pt"
+  frozen: true                 # CRITICAL: must be frozen
+  controlled_layer: 9          # mid-depth of 18 layers
+
+metacontroller:
+  n_z: 32                      # controller code dimension
+  rank: 32                     # low-rank controller U_t = B_t @ A_t
+  encoder:
+    type: "bigru"              # bidirectional GRU (non-causal)
+    hidden_size: 128
+  switching_unit:
+    hidden_size: 128
+  decoder:
+    type: "low_rank_hypernetwork"
+
+loss:
+  alpha: 0.05                  # KL weight (rate-distortion tradeoff)
+                               # larger = coarser boundaries
+                               # smaller = finer boundaries
+
+data:
+  # Same data as Phase 1, but used differently:
+  # we forward-pass through frozen expert and collect residual streams
+  dataset_path: "/data/ssv2/"
+  max_sequence_length: 256
+  target_fps: 50
+
+training:
+  batch_size: 128
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  max_steps: 200000
+  optimizer: "adamw"
+  grad_clip: 1.0
+
+  checkpoint:
+    save_every: 5000
+    output_dir: "checkpoints/phase2/"
+
+logging:
+  wandb_project: "temporal-phase2"
+  log_every: 100
+  visualize_beta_every: 1000   # plot beta_t patterns
