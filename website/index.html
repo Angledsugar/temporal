@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TempoRAL: Discovering Action-Expert-Aware Subtask Boundaries via Internal RL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --accent-dark: #2980b9;
+            --bg: #ffffff;
+            --bg-alt: #f8f9fa;
+            --bg-dark: #ecf0f1;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --border: #dee2e6;
+            --phase1: #e74c3c;
+            --phase2: #f39c12;
+            --phase3: #27ae60;
+            --deploy: #3498db;
+            --max-width: 900px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+
+        /* ===== Header / Title Section ===== */
+        .hero {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            padding: 80px 20px 60px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-family: 'Noto Serif', serif;
+            font-size: 2.8em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero h1 span.highlight {
+            color: #f39c12;
+        }
+
+        .hero .subtitle {
+            font-size: 1.15em;
+            font-weight: 300;
+            max-width: 750px;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+            opacity: 0.92;
+        }
+
+        .authors {
+            font-size: 1.05em;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .affiliation {
+            font-size: 0.9em;
+            opacity: 0.75;
+            margin-bottom: 30px;
+        }
+
+        .hero-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .hero-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-paper {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-paper:hover {
+            background: #c0392b;
+        }
+
+        .btn-code {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-code:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* ===== Main Content ===== */
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        section {
+            padding: 50px 0;
+        }
+
+        section + section {
+            border-top: 1px solid var(--border);
+        }
+
+        h2 {
+            font-family: 'Noto Serif', serif;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--primary);
+        }
+
+        h3 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 28px 0 12px;
+            color: var(--primary);
+        }
+
+        p {
+            margin-bottom: 16px;
+            text-align: justify;
+        }
+
+        /* ===== TLDR / Abstract Box ===== */
+        .abstract-box {
+            background: var(--bg-alt);
+            border-left: 4px solid var(--accent);
+            padding: 24px 28px;
+            border-radius: 0 8px 8px 0;
+            margin: 30px 0;
+        }
+
+        .abstract-box p {
+            margin-bottom: 12px;
+        }
+
+        .abstract-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ===== Figure ===== */
+        .figure {
+            margin: 36px 0;
+            text-align: center;
+        }
+
+        .figure img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .figure-caption {
+            font-size: 0.9em;
+            color: var(--text-light);
+            margin-top: 12px;
+            font-style: italic;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ===== Teaser Diagram ===== */
+        .teaser-diagram {
+            background: var(--bg-alt);
+            border-radius: 12px;
+            padding: 32px;
+            margin: 36px 0;
+            overflow-x: auto;
+        }
+
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            flex-wrap: nowrap;
+            min-width: 700px;
+        }
+
+        .pipeline-phase {
+            text-align: center;
+            padding: 16px 20px;
+            border-radius: 10px;
+            min-width: 150px;
+            position: relative;
+        }
+
+        .pipeline-phase .phase-label {
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .pipeline-phase .phase-title {
+            font-size: 0.95em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .pipeline-phase .phase-detail {
+            font-size: 0.78em;
+            opacity: 0.8;
+        }
+
+        .phase-1 { background: rgba(231,76,60,0.1); border: 2px solid var(--phase1); }
+        .phase-1 .phase-label { color: var(--phase1); }
+
+        .phase-2 { background: rgba(243,156,18,0.1); border: 2px solid var(--phase2); }
+        .phase-2 .phase-label { color: var(--phase2); }
+
+        .phase-3 { background: rgba(39,174,96,0.1); border: 2px solid var(--phase3); }
+        .phase-3 .phase-label { color: var(--phase3); }
+
+        .phase-deploy { background: rgba(52,152,219,0.1); border: 2px solid var(--deploy); }
+        .phase-deploy .phase-label { color: var(--deploy); }
+
+        .pipeline-arrow {
+            font-size: 1.4em;
+            color: var(--text-light);
+            padding: 0 6px;
+            flex-shrink: 0;
+        }
+
+        /* ===== Problem Table ===== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.92em;
+        }
+
+        thead th {
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        thead th:first-child {
+            border-radius: 8px 0 0 0;
+        }
+
+        thead th:last-child {
+            border-radius: 0 8px 0 0;
+        }
+
+        tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--bg-alt);
+        }
+
+        tbody tr:last-child td:first-child {
+            border-radius: 0 0 0 8px;
+        }
+
+        tbody tr:last-child td:last-child {
+            border-radius: 0 0 8px 0;
+        }
+
+        /* ===== Beta Visualization ===== */
+        .beta-viz {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin: 30px 0;
+            color: #ecf0f1;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+
+        .beta-viz .viz-title {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #f39c12;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .beta-row {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            font-size: 0.88em;
+        }
+
+        .beta-label {
+            width: 60px;
+            flex-shrink: 0;
+            color: #95a5a6;
+        }
+
+        .beta-values {
+            display: flex;
+            gap: 2px;
+        }
+
+        .beta-cell {
+            width: 42px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .beta-high {
+            background: rgba(231, 76, 60, 0.8);
+            color: white;
+        }
+
+        .beta-low {
+            background: rgba(52, 152, 219, 0.15);
+            color: #7f8c8d;
+        }
+
+        .beta-annotations {
+            display: flex;
+            gap: 2px;
+            margin-top: 4px;
+        }
+
+        .beta-anno-cell {
+            width: 42px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            color: #f39c12;
+            font-weight: 600;
+        }
+
+        /* ===== Method Cards ===== */
+        .method-cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .method-card {
+            border-radius: 12px;
+            padding: 28px;
+            position: relative;
+        }
+
+        .method-card h3 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .method-card .phase-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: white;
+        }
+
+        .card-phase1 {
+            background: rgba(231,76,60,0.06);
+            border: 1px solid rgba(231,76,60,0.2);
+        }
+        .card-phase1 .phase-badge { background: var(--phase1); }
+
+        .card-phase2 {
+            background: rgba(243,156,18,0.06);
+            border: 1px solid rgba(243,156,18,0.2);
+        }
+        .card-phase2 .phase-badge { background: var(--phase2); }
+
+        .card-phase3 {
+            background: rgba(39,174,96,0.06);
+            border: 1px solid rgba(39,174,96,0.2);
+        }
+        .card-phase3 .phase-badge { background: var(--phase3); }
+
+        .method-card .math-block {
+            background: rgba(0,0,0,0.04);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .method-card ul {
+            padding-left: 20px;
+            margin: 12px 0;
+        }
+
+        .method-card li {
+            margin-bottom: 6px;
+        }
+
+        /* ===== Architecture Specs ===== */
+        .spec-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .spec-item {
+            background: var(--bg-alt);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .spec-item .spec-value {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .spec-item .spec-label {
+            font-size: 0.82em;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* ===== Deployment Diagram ===== */
+        .deploy-flow {
+            background: var(--bg-alt);
+            border-radius: 12px;
+            padding: 28px;
+            margin: 30px 0;
+            font-size: 0.92em;
+        }
+
+        .deploy-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .deploy-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .deploy-step::before {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 38px;
+            bottom: -20px;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .deploy-step:last-child::before {
+            display: none;
+        }
+
+        .step-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85em;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .step-content h4 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            margin: 0;
+            font-size: 0.9em;
+            color: var(--text-light);
+            text-align: left;
+        }
+
+        /* ===== Temporal Contraction Comparison ===== */
+        .contraction-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 24px 0;
+        }
+
+        .contraction-box {
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .contraction-box.standard {
+            background: rgba(231,76,60,0.08);
+            border: 1px solid rgba(231,76,60,0.2);
+        }
+
+        .contraction-box.temporal {
+            background: rgba(39,174,96,0.08);
+            border: 1px solid rgba(39,174,96,0.2);
+        }
+
+        .contraction-box .big-number {
+            font-size: 2.2em;
+            font-weight: 700;
+            margin: 8px 0;
+        }
+
+        .contraction-box.standard .big-number { color: var(--phase1); }
+        .contraction-box.temporal .big-number { color: var(--phase3); }
+
+        .contraction-box .compare-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .contraction-box .compare-detail {
+            font-size: 0.82em;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* ===== Key Insights ===== */
+        .insight-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .insight-list li {
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            background: var(--bg-alt);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+            font-size: 0.95em;
+        }
+
+        .insight-list li strong {
+            color: var(--accent-dark);
+        }
+
+        /* ===== BibTeX ===== */
+        .bibtex-box {
+            background: #1a1a2e;
+            color: #ecf0f1;
+            border-radius: 10px;
+            padding: 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+            overflow-x: auto;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .bibtex-box .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ecf0f1;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .bibtex-box .copy-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* ===== References ===== */
+        .references {
+            font-size: 0.88em;
+            color: var(--text-light);
+        }
+
+        .references ol {
+            padding-left: 24px;
+        }
+
+        .references li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            background: var(--primary);
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 0.85em;
+        }
+
+        footer a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.9em; }
+            .hero .subtitle { font-size: 1em; }
+            .pipeline-flow { flex-direction: column; min-width: auto; }
+            .pipeline-arrow { transform: rotate(90deg); }
+            .pipeline-phase { min-width: auto; width: 100%; }
+            .contraction-compare { grid-template-columns: 1fr; }
+            h2 { font-size: 1.5em; }
+            .beta-viz { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<header class="hero">
+    <div class="container">
+        <h1><span class="highlight">TempoRAL</span></h1>
+        <p class="subtitle">
+            Discovering Action-Expert-Aware Subtask Boundaries<br>
+            via Internal Reinforcement Learning on Human Temporal Abstractions
+        </p>
+        <p class="authors">Anonymous Authors</p>
+        <p class="affiliation">Under Review</p>
+        <div class="hero-links">
+            <a href="#" class="btn-paper"><i class="fas fa-file-pdf"></i> Paper</a>
+            <a href="#" class="btn-code"><i class="fab fa-github"></i> Code</a>
+            <a href="#" class="btn-code"><i class="fas fa-database"></i> Data</a>
+            <a href="#" class="btn-code"><i class="fas fa-video"></i> Video</a>
+        </div>
+    </div>
+</header>
+
+<!-- ===== TLDR ===== -->
+<section>
+    <div class="container">
+        <h2>TL;DR</h2>
+        <div class="abstract-box">
+            <p>
+                Hierarchical VLA systems need to decompose instructions into subtasks at the right granularity for the action expert.
+                Too abstract and the expert fails; too detailed and the planner wastes its budget.
+                <strong>TempoRAL</strong> learns this granularity from data by discovering subtask boundaries
+                from the frozen action expert's internal representations, then optimizing them via Internal RL.
+            </p>
+            <p>
+                The key insight: <strong>temporal boundary structures are embodiment-invariant</strong> &mdash;
+                humans and robots share the same reach &rarr; grasp &rarr; lift &rarr; place pattern.
+                This enables pretraining on virtually unlimited human manipulation data.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== PIPELINE OVERVIEW ===== -->
+<section>
+    <div class="container">
+        <h2>Three-Phase Pipeline</h2>
+        <div class="teaser-diagram">
+            <div class="pipeline-flow">
+                <div class="pipeline-phase phase-1">
+                    <div class="phase-label">Phase 1</div>
+                    <div class="phase-title">Action Expert</div>
+                    <div class="phase-detail">Flow-matching on<br>human motion data</div>
+                </div>
+                <div class="pipeline-arrow">&rarr;</div>
+                <div class="pipeline-phase phase-2">
+                    <div class="phase-label">Phase 2</div>
+                    <div class="phase-title">MetaController</div>
+                    <div class="phase-detail">Self-supervised<br>boundary discovery</div>
+                </div>
+                <div class="pipeline-arrow">&rarr;</div>
+                <div class="pipeline-phase phase-3">
+                    <div class="phase-label">Phase 3</div>
+                    <div class="phase-title">Internal RL</div>
+                    <div class="phase-detail">Optimize granularity<br>for task success</div>
+                </div>
+                <div class="pipeline-arrow">&rarr;</div>
+                <div class="pipeline-phase phase-deploy">
+                    <div class="phase-label">Deploy</div>
+                    <div class="phase-title">VLM + Expert</div>
+                    <div class="phase-detail">Capability prompt<br>+ runtime replan</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== PROBLEM ===== -->
+<section>
+    <div class="container">
+        <h2>The Subtask Granularity Problem</h2>
+        <p>
+            Systems like &pi;<sub>0.5</sub> separate planning (VLM) from execution (action expert).
+            But the interface between them &mdash; the granularity of each subtask &mdash;
+            is set by heuristic prompt engineering with <em>no feedback from the action expert itself</em>.
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Example</th>
+                    <th>Failure Mode</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Too abstract</strong></td>
+                    <td>"Make coffee"</td>
+                    <td>Requires dozens of contact phases; 300M expert cannot infer the full plan from a single embedding</td>
+                </tr>
+                <tr>
+                    <td><strong>Too detailed</strong></td>
+                    <td>"Rotate wrist 15&deg;"</td>
+                    <td>Wastes VLM language modeling budget on trivially short segments; increases N, slowing overall inference</td>
+                </tr>
+                <tr>
+                    <td><strong>Misaligned</strong></td>
+                    <td>"Place cup under machine"</td>
+                    <td>Sounds reasonable but may not respect the expert's <em>actual</em> capability boundary</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ===== ABSTRACT ===== -->
+<section>
+    <div class="container">
+        <h2>Abstract</h2>
+        <p>
+            Vision-Language-Action (VLA) systems increasingly adopt hierarchical architectures where a large
+            Vision-Language Model decomposes task instructions into subtask sequences and a lightweight action
+            expert executes them. A critical yet under-explored question arises: <em>at what granularity should
+            subtasks be specified for the action expert to reliably execute them?</em>
+        </p>
+        <p>
+            We observe that <strong>temporal abstraction structure</strong> &mdash; where one subtask ends and
+            another begins &mdash; is largely <strong>embodiment-invariant</strong>: a human grasping a cup and
+            a robot grasping a cup share the same boundary pattern despite kinematic differences.
+        </p>
+        <p>
+            Building on this insight, we propose <strong>TempoRAL</strong>, a three-phase framework:
+            (1) pretrain an action expert on large-scale human manipulation data to learn embodiment-invariant temporal priors,
+            (2) discover subtask boundaries from the frozen expert's internal representations via a self-supervised MetaController,
+            (3) optimize subtask granularity for task success through Internal RL in the abstract controller-code space.
+        </p>
+        <p>
+            At deployment, the learned boundary predictor serves a dual purpose: providing a
+            <strong>capability-aware prior</strong> for VLM prompting and enabling
+            <strong>runtime re-planning</strong> when the expert detects a subtask exceeds its capability.
+        </p>
+    </div>
+</section>
+
+<!-- ===== METHOD ===== -->
+<section>
+    <div class="container">
+        <h2>Method</h2>
+
+        <div class="method-cards">
+            <!-- Phase 1 -->
+            <div class="method-card card-phase1">
+                <h3>
+                    <span class="phase-badge" style="background: var(--phase1)">Phase 1</span>
+                    Action Expert Pretraining
+                </h3>
+                <p>
+                    Pretrain a Gemma-300M transformer on large-scale human manipulation data using
+                    conditional flow matching. Human hand joints are retargeted to a canonical
+                    end-effector representation (position, orientation, gripper).
+                </p>
+
+                <div class="spec-grid">
+                    <div class="spec-item">
+                        <div class="spec-value">311M</div>
+                        <div class="spec-label">Parameters</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-value">1024</div>
+                        <div class="spec-label">Hidden Width</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-value">18</div>
+                        <div class="spec-label">Layers</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-value">50Hz</div>
+                        <div class="spec-label">Control Rate</div>
+                    </div>
+                </div>
+
+                <div class="math-block">
+                    $$\mathcal{L}_{\text{FM}}(\theta) = \mathbb{E}_{t, \tau, \epsilon} \left\| v_\theta(a_\tau^{(t)}, t \mid s, q_\tau) - u_t(a_\tau^{(t)} \mid a_\tau) \right\|^2$$
+                </div>
+
+                <p>
+                    <strong>Data sources:</strong> Something-Something V2 (40%), Ego4D hand subset (40%),
+                    UniHand (20%) &mdash; orders of magnitude more data than robot demonstrations.
+                </p>
+                <p>
+                    <strong>After this phase, &theta; is frozen permanently.</strong>
+                    Co-training with the MetaController causes temporal abstractions to collapse.
+                </p>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="method-card card-phase2">
+                <h3>
+                    <span class="phase-badge" style="background: var(--phase2)">Phase 2</span>
+                    MetaController Discovery
+                </h3>
+                <p>
+                    Extract the residual stream at layer 9 from the frozen expert, then train a MetaController
+                    (&sim;2M params) to discover subtask boundaries &mdash; purely self-supervised, no boundary annotations.
+                </p>
+                <ul>
+                    <li><strong>Encoder</strong> (BiGRU): Processes full sequence &rarr; per-timestep latent statistics (&mu;<sub>t</sub>, &sigma;<sub>t</sub>)</li>
+                    <li><strong>Switching Unit</strong>: Predicts &beta;<sub>t</sub> &isin; [0,1] &mdash; switch to new controller or maintain</li>
+                    <li><strong>Decoder</strong> (Hypernetwork): z<sub>t</sub> &rarr; low-rank controller U<sub>t</sub> = B<sub>t</sub>A<sub>t</sub></li>
+                </ul>
+
+                <div class="math-block">
+                    $$\mathcal{L}(\phi) = \sum_{t=1}^{T} \left[ -\ln p_{\theta,\phi}(a_t \mid o_{1:t}, z_{1:t}) + \alpha \, D_{\text{KL}}\!\left(\mathcal{N}(\mu_t, \sigma_t^2) \| \mathcal{N}(0, I)\right) \right]$$
+                </div>
+
+                <p>
+                    The additive residual stream intervention keeps the 300M model frozen:
+                </p>
+                <div class="math-block">
+                    $$e'_{t,l} = e_{t,l} + U_t \, e_{t,l}, \quad U_t = B_t A_t \in \mathbb{R}^{1024 \times 1024}, \; \text{rank} = 32$$
+                </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="method-card card-phase3">
+                <h3>
+                    <span class="phase-badge" style="background: var(--phase3)">Phase 3</span>
+                    Internal RL Optimization
+                </h3>
+                <p>
+                    Construct an "internal" MDP where the state is the residual stream, the action is a controller code,
+                    and the action expert + physical world form the environment dynamics.
+                    Only the causal RL policy (&psi;) is trained; everything else is frozen.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr><th>Component</th><th>Definition</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>State</strong></td><td>Residual stream $e_{t,l} \in \mathbb{R}^{1024}$</td></tr>
+                        <tr><td><strong>Action</strong></td><td>Controller code $z_t \in \mathbb{R}^{32}$</td></tr>
+                        <tr><td><strong>Reward</strong></td><td>Binary task success (sparse)</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="math-block">
+                    $$\nabla_\psi J = \mathbb{E}\!\left[\sum_{m=1}^{M} A_m \, \nabla_\psi \ln \pi_\psi(z_{t_m} \mid e_{1:t_m, l})\right]$$
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== EMERGENT BOUNDARIES ===== -->
+<section>
+    <div class="container">
+        <h2>Emergent Subtask Boundaries</h2>
+        <p>
+            After Phase 2 training, the switching gate &beta;<sub>t</sub> learns sparse, quasi-binary firing patterns
+            that align with semantic action transitions &mdash; <strong>without any boundary supervision</strong>.
+            This reflects what the action expert internally "considers" to be a single coherent action unit.
+        </p>
+        <div class="beta-viz">
+            <div class="viz-title">Learned &beta;<sub>t</sub> Pattern (No Boundary Supervision)</div>
+            <div class="beta-row">
+                <span class="beta-label">Time</span>
+                <div class="beta-values">
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">1</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">2</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">3</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">4</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">5</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">6</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">7</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">8</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">9</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">10</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">11</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">12</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">13</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">14</div>
+                    <div class="beta-cell" style="background:none; color:#95a5a6;">15</div>
+                </div>
+            </div>
+            <div class="beta-row">
+                <span class="beta-label">&beta;<sub>t</sub></span>
+                <div class="beta-values">
+                    <div class="beta-cell beta-high">1</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-high">1</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-high">1</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-high">1</div>
+                    <div class="beta-cell beta-low">0</div>
+                    <div class="beta-cell beta-low">0</div>
+                </div>
+            </div>
+            <div class="beta-row">
+                <span class="beta-label"></span>
+                <div class="beta-annotations">
+                    <div class="beta-anno-cell">&uarr;</div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell">&uarr;</div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell">&uarr;</div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell">&uarr;</div>
+                    <div class="beta-anno-cell"></div>
+                    <div class="beta-anno-cell"></div>
+                </div>
+            </div>
+            <div class="beta-row">
+                <span class="beta-label"></span>
+                <div class="beta-annotations">
+                    <div class="beta-anno-cell" style="width: 126px; justify-content: center; color: #e74c3c; font-size: 0.8em;">reach</div>
+                    <div class="beta-anno-cell" style="width: 42px;"></div>
+                    <div class="beta-anno-cell" style="width: 84px; justify-content: center; color: #f39c12; font-size: 0.8em;">grasp</div>
+                    <div class="beta-anno-cell" style="width: 42px;"></div>
+                    <div class="beta-anno-cell" style="width: 168px; justify-content: center; color: #27ae60; font-size: 0.8em;">lift</div>
+                    <div class="beta-anno-cell" style="width: 42px;"></div>
+                    <div class="beta-anno-cell" style="width: 84px; justify-content: center; color: #3498db; font-size: 0.8em;">place</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== TEMPORAL CONTRACTION ===== -->
+<section>
+    <div class="container">
+        <h2>Temporal Contraction</h2>
+        <p>
+            Internal RL's key advantage: instead of making a decision at every timestep (standard RL),
+            the policy acts only at switching points where &beta;<sub>t</sub> fires.
+            This dramatically reduces the search space and improves credit assignment.
+        </p>
+
+        <div class="contraction-compare">
+            <div class="contraction-box standard">
+                <div class="compare-label">Standard RL</div>
+                <div class="big-number">T = 50</div>
+                <div class="compare-detail">decisions per episode<br>(every timestep)</div>
+            </div>
+            <div class="contraction-box temporal">
+                <div class="compare-label">Internal RL</div>
+                <div class="big-number">M = 4</div>
+                <div class="compare-detail">decisions per episode<br>(switching points only)</div>
+            </div>
+        </div>
+
+        <p style="text-align: center; font-size: 1.1em; font-weight: 600; color: var(--phase3);">
+            12.5&times; reduction in search space &rarr; dramatically lower gradient variance
+        </p>
+    </div>
+</section>
+
+<!-- ===== DEPLOYMENT ===== -->
+<section>
+    <div class="container">
+        <h2>Deployment Pipeline</h2>
+        <p>
+            At deployment, the learned boundary predictor serves two simultaneous purposes:
+            a static capability-aware prior for efficient prompting, and a dynamic runtime re-planning trigger
+            for robustness.
+        </p>
+
+        <div class="deploy-flow">
+            <div class="deploy-step">
+                <div class="step-icon" style="background: var(--deploy);">1</div>
+                <div class="step-content">
+                    <h4>User Instruction</h4>
+                    <p>"Make a cup of coffee"</p>
+                </div>
+            </div>
+            <div class="deploy-step">
+                <div class="step-icon" style="background: var(--phase2);">2</div>
+                <div class="step-content">
+                    <h4>VLM + Capability-Aware Prompt</h4>
+                    <p>
+                        The VLM receives a system prompt encoding the expert's learned capability profile,
+                        generating all subtasks at once at the appropriate granularity.
+                    </p>
+                </div>
+            </div>
+            <div class="deploy-step">
+                <div class="step-icon" style="background: var(--phase3);">3</div>
+                <div class="step-content">
+                    <h4>Sequential Execution with &beta;<sub>t</sub> Monitoring</h4>
+                    <p>
+                        For each subtask: Action Expert + MetaController execute while monitoring &beta;<sub>t</sub>.
+                        Normal completion (&beta;<sub>t</sub> &rarr; 1 at expected time) proceeds to next subtask.
+                    </p>
+                </div>
+            </div>
+            <div class="deploy-step">
+                <div class="step-icon" style="background: var(--phase1);">4</div>
+                <div class="step-content">
+                    <h4>Runtime Re-Planning (if needed)</h4>
+                    <p>
+                        If &beta;<sub>t</sub> fires early or the expert's internal state deviates,
+                        a re-planning request is sent to the VLM for finer-grained decomposition.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== KEY INSIGHTS ===== -->
+<section>
+    <div class="container">
+        <h2>Key Design Insights</h2>
+
+        <ul class="insight-list">
+            <li>
+                <strong>Frozen expert is critical.</strong>
+                Co-training the action expert with the MetaController causes temporal abstractions to collapse.
+                Freezing &theta; creates an information bottleneck that forces &beta;<sub>t</sub> to capture
+                genuine temporal structure.
+            </li>
+            <li>
+                <strong>Embodiment-invariant temporal boundaries.</strong>
+                The temporal boundary pattern (reach &rarr; grasp &rarr; lift &rarr; place) is shared across embodiments,
+                enabling pretraining on virtually unlimited human data
+                (~10<sup>8</sup> samples vs ~10<sup>5</sup> robot trajectories).
+            </li>
+            <li>
+                <strong>Residual stream intervention, not weight modification.</strong>
+                The MetaController applies additive control on residual streams:
+                e' = e + U&middot;e. This adds only ~2M parameters on top of the frozen 311M expert.
+            </li>
+            <li>
+                <strong>Non-causal to causal transition.</strong>
+                Phase 2 uses a non-causal BiGRU (sees future) for optimal boundary discovery.
+                Phase 3 replaces this with a causal GRU for online execution where the future is unavailable.
+            </li>
+            <li>
+                <strong>Dual deployment mechanism.</strong>
+                Static capability-aware prompting for efficiency (all subtasks generated at once)
+                + dynamic &beta;<sub>t</sub> monitoring for robustness (graceful degradation when initial decomposition is imperfect).
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- ===== RELATED WORK ===== -->
+<section>
+    <div class="container">
+        <h2>Related Work</h2>
+
+        <h3>Vision-Language-Action Models</h3>
+        <p>
+            RT-2, &pi;<sub>0</sub>, &pi;<sub>0.5</sub>, OpenVLA, and Octo have advanced VLA capabilities,
+            but all treat the subtask-action interface as a fixed design choice.
+            None learns or adapts it from data or the action expert's capabilities.
+        </p>
+
+        <h3>Temporal Abstraction &amp; Hierarchical RL</h3>
+        <p>
+            The Options framework, Option-Critic, HIRO, and CompILE address temporal abstraction in RL.
+            Most recently, Kobayashi et al. (2025) proposed Internal RL, showing that a MetaController
+            trained on a frozen autoregressive model's residual stream discovers temporal abstractions
+            aligned with ground-truth subgoals. We extend this from gridworld/MuJoCo to VLA action experts.
+        </p>
+
+        <h3>Learning from Human Data</h3>
+        <p>
+            LAPA, MT-&pi;, and Being-H0 transfer low-level actions or visual features from human data.
+            We transfer <em>temporal abstraction structure</em>, which is more abstract and therefore
+            more embodiment-invariant.
+        </p>
+    </div>
+</section>
+
+<!-- ===== BIBTEX ===== -->
+<section>
+    <div class="container">
+        <h2>Citation</h2>
+        <div class="bibtex-box">
+            <button class="copy-btn" onclick="copyBibtex()"><i class="fas fa-copy"></i> Copy</button>
+<pre id="bibtex-text">@article{temporal2025,
+  title     = {TempoRAL: Discovering Action-Expert-Aware Subtask
+               Boundaries via Internal Reinforcement Learning
+               on Human Temporal Abstractions},
+  author    = {Anonymous},
+  journal   = {Under Review},
+  year      = {2025}
+}</pre>
+        </div>
+    </div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section>
+    <div class="container">
+        <h2>References</h2>
+        <div class="references">
+            <ol>
+                <li>Physical Intelligence. <em>&pi;<sub>0</sub>: A Vision-Language-Action Flow Model for General Robot Control.</em> arXiv:2410.24164, 2024.</li>
+                <li>Physical Intelligence. <em>&pi;<sub>0.5</sub>: A Vision-Language-Action Model with Open-World Generalization.</em> 2025.</li>
+                <li>Physical Intelligence. <em>&pi;<sub>0</sub>-FAST: Efficient Action Tokenization for Vision-Language-Action Models.</em> 2025.</li>
+                <li>Physical Intelligence. <em>Emergent Cross-Embodiment Alignment in Scaled VLA Models.</em> Blog post, 2025.</li>
+                <li>S. Kobayashi et al. <em>Emergent temporal abstractions in autoregressive models enable hierarchical reinforcement learning.</em> arXiv:2512.20605, 2025.</li>
+                <li>A. Brohan et al. <em>RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control.</em> arXiv:2307.15818, 2023.</li>
+                <li>M. Kim et al. <em>OpenVLA: An Open-Source Vision-Language-Action Model.</em> arXiv:2406.09246, 2024.</li>
+                <li>Octo Model Team. <em>Octo: An Open-Source Generalist Robot Policy.</em> arXiv:2405.12213, 2024.</li>
+                <li>Open X-Embodiment Collaboration. <em>Open X-Embodiment: Robotic Learning Datasets and RT-X Models.</em> arXiv:2310.08864, 2023.</li>
+                <li>K. Grauman et al. <em>Ego4D: Around the World in 3,000 Hours of Egocentric Video.</em> CVPR, 2022.</li>
+            </ol>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+    <div class="container">
+        <p>
+            TempoRAL Project Page &mdash;
+            Template inspired by <a href="#">NeRF</a> and <a href="#">Nerfies</a> project pages.
+        </p>
+    </div>
+</footer>
+
+<script>
+function copyBibtex() {
+    const text = document.getElementById('bibtex-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        }, 2000);
+    });
+}
+</script>
+
+</body>
+</html>
