@@ -51,7 +51,7 @@ The switching gate β_t learns sparse, quasi-binary patterns aligned with semant
 ## Architecture
 
 ```
-Phase 1 (θ pretrain) → Phase 2 (φ learn; θ frozen) → Phase 3 (ψ learn; θ,φ frozen) → Deploy
+Pretrain (θ) → Expert Distill (φ learn; θ frozen) → Optimize (ψ learn; θ,φ frozen) → Deploy
 ```
 
 ### Phase 1: Action Expert Pretraining
@@ -71,7 +71,7 @@ $$\mathcal{L}_{\text{FM}}(\theta) = \mathbb{E}_{t, \tau, \epsilon} \left\| v_\th
 
 **After this phase, θ is frozen permanently.**
 
-### Phase 2: MetaController Discovery (Self-Supervised)
+### Expert Distill: MetaController Discovery (Self-Supervised)
 
 Extract the residual stream at layer 9 from the frozen expert, then train a MetaController with three components:
 
@@ -89,7 +89,7 @@ Time:  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15
     (reach)     (grasp)   (lift)            (place)
 ```
 
-### Phase 3: Internal RL
+### Optimize: Internal RL
 
 Optimize subtask granularity via RL in the abstract controller-code space:
 
@@ -125,17 +125,17 @@ temporal/
 ├── models/
 │   ├── action_expert.py          # Wraps OpenPi Gemma-300M, exposes residual stream
 │   ├── metacontroller.py         # Encoder + Switching Unit + Decoder (~2M params)
-│   └── internal_rl_policy.py     # Causal GRU policy for Phase 3
+│   └── internal_rl_policy.py     # Causal GRU policy for Optimize
 │
 ├── data/
 │   ├── human_motion_dataset.py   # Human manipulation data loader
 │   ├── retargeting.py            # Human hand → canonical EE representation
-│   └── robot_dataset.py          # Robot demo loader (for Phase 3 evaluation)
+│   └── robot_dataset.py          # Robot demo loader (for Optimize evaluation)
 │
 ├── training/
-│   ├── phase1_trainer.py         # Flow-matching pretraining loop
-│   ├── phase2_trainer.py         # Self-supervised MetaController training
-│   └── phase3_trainer.py         # Internal RL training loop (REINFORCE)
+│   ├── phase1_trainer.py              # Flow-matching pretraining loop
+│   ├── expert_distill_trainer.py     # Self-supervised MetaController training
+│   └── phase3_trainer.py             # Internal RL training loop (REINFORCE)
 │
 ├── envs/
 │   └── internal_env.py           # Internal MDP (state=residual, action=controller code)
@@ -152,13 +152,13 @@ temporal/
 │
 ├── configs/
 │   ├── phase1_pretrain.yaml
-│   ├── phase2_metacontroller.yaml
+│   ├── expert_distill.yaml
 │   ├── phase3_internal_rl.yaml
 │   └── deploy.yaml
 │
 └── scripts/
     ├── train_phase1.py
-    ├── train_phase2.py
+    ├── train_expert_distill.py
     ├── train_phase3.py
     ├── deploy.py
     └── evaluate.py
@@ -183,18 +183,18 @@ python scripts/train_phase1.py \
     --data /path/to/human_motion_data \
     --output checkpoints/phase1/
 
-# Phase 2: Train MetaController (self-supervised boundary discovery)
-python scripts/train_phase2.py \
-    --config temporal/configs/phase2_metacontroller.yaml \
+# Expert Distill: Train MetaController (self-supervised boundary discovery)
+python scripts/train_expert_distill.py \
+    --config temporal/configs/expert_distill.yaml \
     --expert checkpoints/phase1/action_expert.pt \
     --data /path/to/demonstration_data \
-    --output checkpoints/phase2/
+    --output checkpoints/expert_distill/
 
 # Phase 3: Internal RL (subtask granularity optimization)
 python scripts/train_phase3.py \
     --config temporal/configs/phase3_internal_rl.yaml \
     --expert checkpoints/phase1/action_expert.pt \
-    --meta checkpoints/phase2/metacontroller.pt \
+    --meta checkpoints/expert_distill/metacontroller.pt \
     --env sim_manipulation \
     --output checkpoints/phase3/
 ```
@@ -206,7 +206,7 @@ python scripts/deploy.py \
     --config temporal/configs/deploy.yaml \
     --vlm gemini-pro \
     --expert checkpoints/phase1/action_expert.pt \
-    --meta checkpoints/phase2/metacontroller.pt \
+    --meta checkpoints/expert_distill/metacontroller.pt \
     --policy checkpoints/phase3/rl_policy.pt \
     --task "make a cup of coffee"
 ```
@@ -216,7 +216,7 @@ python scripts/deploy.py \
 ```bash
 python scripts/evaluate.py \
     --expert checkpoints/phase1/action_expert.pt \
-    --meta checkpoints/phase2/metacontroller.pt \
+    --meta checkpoints/expert_distill/metacontroller.pt \
     --policy checkpoints/phase3/rl_policy.pt \
     --env sim_manipulation \
     --metrics success_rate switching_nmi tcr
@@ -230,7 +230,7 @@ python scripts/evaluate.py \
 
 3. **Residual stream intervention**: Rather than modifying model weights, the MetaController applies additive control on residual streams: e' = e + U·e. This adds only ~2M parameters on top of the frozen 311M expert.
 
-4. **Non-causal → Causal transition**: Phase 2 uses BiGRU (sees future) for optimal boundary discovery. Phase 3 replaces this with a causal GRU for online execution.
+4. **Non-causal → Causal transition**: Expert Distill uses BiGRU (sees future) for optimal boundary discovery. Optimize replaces this with a causal GRU for online execution.
 
 ## References
 

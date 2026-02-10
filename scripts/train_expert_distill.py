@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Phase 2: Train MetaController on frozen action expert's residual stream.
+"""Expert Distill: Train MetaController on frozen action expert's residual stream.
 
 Usage:
-    python scripts/train_phase2.py \
-        --config temporal/configs/phase2_metacontroller.yaml \
+    python scripts/train_expert_distill.py \
+        --config temporal/configs/expert_distill.yaml \
         --expert checkpoints/phase1/action_expert.pt \
         --data /path/to/demonstration_data \
-        --output checkpoints/phase2/
+        --output checkpoints/expert_distill/
 """
 
 from __future__ import annotations
@@ -21,18 +21,18 @@ import yaml
 from temporal.data.human_motion_dataset import HumanMotionDataset, create_dataloader
 from temporal.models.action_expert import ActionExpertWrapper
 from temporal.models.metacontroller import MetaController
-from temporal.training.phase2_trainer import Phase2Trainer
+from temporal.training.expert_distill_trainer import ExpertDistillTrainer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Phase 2: MetaController training")
-    parser.add_argument("--config", type=str, default="temporal/configs/phase2_metacontroller.yaml")
+    parser = argparse.ArgumentParser(description="Expert Distill: MetaController training")
+    parser.add_argument("--config", type=str, default="temporal/configs/expert_distill.yaml")
     parser.add_argument("--expert", type=str, required=True, help="Phase 1 action expert checkpoint")
     parser.add_argument("--data", type=str, required=True, help="Path to demonstration data")
-    parser.add_argument("--output", type=str, default="checkpoints/phase2/")
+    parser.add_argument("--output", type=str, default="checkpoints/expert_distill/")
     parser.add_argument("--resume", type=str, default=None)
     args = parser.parse_args()
 
@@ -86,7 +86,7 @@ def main() -> None:
         logger.info(f"Resumed from {args.resume}")
 
     # Trainer
-    trainer = Phase2Trainer(
+    trainer = ExpertDistillTrainer(
         expert=expert,
         metacontroller=metacontroller,
         dataloader=dataloader,
@@ -122,7 +122,7 @@ def main() -> None:
         {"epoch": num_epochs, "model_state_dict": metacontroller.state_dict()},
         final_path,
     )
-    logger.info(f"Phase 2 complete. Final checkpoint: {final_path}")
+    logger.info(f"Expert Distill complete. Final checkpoint: {final_path}")
 
 
 if __name__ == "__main__":

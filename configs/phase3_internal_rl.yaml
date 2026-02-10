@@ -7,7 +7,7 @@ action_expert:
   frozen: true
 
 metacontroller:
-  checkpoint: "checkpoints/phase2/metacontroller.pt"
+  checkpoint: "checkpoints/expert_distill/metacontroller.pt"
   frozen: true                 # only decoder is used
 
 rl_policy:

@@ -1,0 +1,51 @@
+services:
+  expert-distill:
+    build:
+      context: ../../..          # repo root (raise-vla/)
+      dockerfile: temporal/docker/expert_distill/Dockerfile
+    image: temporal-expert-distill:latest
+    container_name: temporal-expert-distill
+
+    # RTX 4090 GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 128g
+
+    # Shared memory for PyTorch DataLoader
+    shm_size: "16g"
+
+    volumes:
+      # Persist dataset/checkpoint/output across runs
+      - expert-distill-dataset:/dataset
+      - expert-distill-checkpoint:/checkpoint
+      - ./output:/output
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+      # Training hyperparameters (override via env)
+      - DISTILL_STEPS=5000
+      - BATCH_SIZE=16
+      - LR=1e-3
+      - ALPHA=0.05
+      - SUBSEQUENCE_LEN=50
+      # Paths (defaults match Dockerfile)
+      - DATASET_DIR=/dataset/droid_100
+      - CHECKPOINT_DIR=/checkpoint/pi05_droid
+      - OUTPUT_DIR=/output
+
+    # GCP auth for gsutil (mount your credentials if needed)
+    # Uncomment below if your GCS buckets require authentication:
+    # - ~/.config/gcloud:/root/.config/gcloud:ro
+
+volumes:
+  expert-distill-dataset:
+    driver: local
+  expert-distill-checkpoint:
+    driver: local

@@ -4,7 +4,7 @@
 Usage:
     python scripts/evaluate.py \
         --expert checkpoints/phase1/action_expert.pt \
-        --meta checkpoints/phase2/metacontroller.pt \
+        --meta checkpoints/expert_distill/metacontroller.pt \
         --policy checkpoints/phase3/rl_policy.pt \
         --data /path/to/eval_data \
         --output results/

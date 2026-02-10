@@ -731,7 +731,7 @@
                 </div>
                 <div class="pipeline-arrow">&rarr;</div>
                 <div class="pipeline-phase phase-2">
-                    <div class="phase-label">Phase 2</div>
+                    <div class="phase-label">Expert Distill</div>
                     <div class="phase-title">MetaController</div>
                     <div class="phase-detail">Self-supervised<br>boundary discovery</div>
                 </div>
@@ -870,10 +870,10 @@
                 </p>
             </div>
 
-            <!-- Phase 2 -->
+            <!-- Expert Distill -->
             <div class="method-card card-phase2">
                 <h3>
-                    <span class="phase-badge" style="background: var(--phase2)">Phase 2</span>
+                    <span class="phase-badge" style="background: var(--phase2)">Expert Distill</span>
                     MetaController Discovery
                 </h3>
                 <p>
@@ -934,7 +934,7 @@
     <div class="container">
         <h2>Emergent Subtask Boundaries</h2>
         <p>
-            After Phase 2 training, the switching gate &beta;<sub>t</sub> learns sparse, quasi-binary firing patterns
+            After Expert Distill training, the switching gate &beta;<sub>t</sub> learns sparse, quasi-binary firing patterns
             that align with semantic action transitions &mdash; <strong>without any boundary supervision</strong>.
             This reflects what the action expert internally "considers" to be a single coherent action unit.
         </p>
@@ -1122,8 +1122,8 @@
             </li>
             <li>
                 <strong>Non-causal to causal transition.</strong>
-                Phase 2 uses a non-causal BiGRU (sees future) for optimal boundary discovery.
-                Phase 3 replaces this with a causal GRU for online execution where the future is unavailable.
+                Expert Distill uses a non-causal BiGRU (sees future) for optimal boundary discovery.
+                Optimize replaces this with a causal GRU for online execution where the future is unavailable.
             </li>
             <li>
                 <strong>Dual deployment mechanism.</strong>

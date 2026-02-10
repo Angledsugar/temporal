@@ -1,11 +1,11 @@
-"""Causal RL Policy for Phase 3 (Internal RL).
+"""Causal RL Policy for Optimize phase (Internal RL).
 
-Replaces the non-causal BiGRU encoder from Phase 2.
+Replaces the non-causal BiGRU encoder from Expert Distill.
 Observes only past+present residual stream activations (causal).
 Outputs controller codes z_t at switching points.
 
-Phase 2 (training):  z_t depends on s(e_{1:T})  <-- future info included
-Phase 3 (RL):        z_t = pi_psi(z_t | e_{1:t}) <-- causal, past only
+Expert Distill:  z_t depends on s(e_{1:T})  <-- future info included
+Optimize (RL):   z_t = pi_psi(z_t | e_{1:t}) <-- causal, past only
 """
 
 from __future__ import annotations

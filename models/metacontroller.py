@@ -1,8 +1,8 @@
 """MetaController: the core innovation of TempoRAL.
 
 Discovers subtask boundaries from the frozen action expert's residual
-stream via a self-supervised variational objective (Phase 2), then
-provides the low-rank controller decoder for Internal RL (Phase 3).
+stream via a self-supervised variational objective (Expert Distill), then
+provides the low-rank controller decoder for Internal RL (Optimize).
 
 Architecture:
     Encoder (BiGRU)  -->  mu_t, sigma_t  -->  z_tilde_t
@@ -22,7 +22,7 @@ import torch.nn as nn
 
 
 class MetaControllerEncoder(nn.Module):
-    """Bidirectional GRU encoder (non-causal, Phase 2 only).
+    """Bidirectional GRU encoder (non-causal, Expert Distill only).
 
     Processes the FULL sequence of residual-stream activations
     (including future information) to produce per-timestep latent
@@ -151,10 +151,10 @@ class ControllerDecoder(nn.Module):
 class MetaController(nn.Module):
     """Full MetaController: encoder + switching unit + decoder.
 
-    Phase 2: All components trained together (base model frozen).
-    Phase 3: Only decoder is used (frozen); encoder replaced by causal RL policy.
+    Expert Distill: All components trained together (base model frozen).
+    Optimize: Only decoder is used (frozen); encoder replaced by causal RL policy.
 
-    Loss (Phase 2):
+    Loss (Expert Distill):
         L(phi) = sum_t [ -ln p(a_t | o_{1:t}, z_{1:t})
                          + alpha * KL(N(mu_t, sigma_t^2) || N(0, I)) ]
     """
@@ -175,7 +175,7 @@ class MetaController(nn.Module):
     def forward(
         self, e_seq: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Full forward pass for Phase 2 training.
+        """Full forward pass for Expert Distill training.
 
         Args:
             e_seq: (B, T, n_e) -- residual stream from frozen action expert.

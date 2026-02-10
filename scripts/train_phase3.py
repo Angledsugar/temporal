@@ -5,7 +5,7 @@ Usage:
     python scripts/train_phase3.py \
         --config temporal/configs/phase3_internal_rl.yaml \
         --expert checkpoints/phase1/action_expert.pt \
-        --meta checkpoints/phase2/metacontroller.pt \
+        --meta checkpoints/expert_distill/metacontroller.pt \
         --env sim_manipulation \
         --output checkpoints/phase3/
 """

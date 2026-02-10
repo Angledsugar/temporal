@@ -1,5 +1,5 @@
-# Phase 2: MetaController Self-Supervised Training
-# Train MetaController on frozen action expert's residual stream.
+# Expert Distill: MetaController Self-Supervised Training
+# Distills temporal abstraction structure from frozen action expert's residual stream.
 # Discovers subtask boundaries (beta_t) without supervision.
 
 action_expert:
@@ -40,9 +40,9 @@ training:
 
   checkpoint:
     save_every: 5000
-    output_dir: "checkpoints/phase2/"
+    output_dir: "checkpoints/expert_distill/"
 
 logging:
-  wandb_project: "temporal-phase2"
+  wandb_project: "temporal-expert-distill"
   log_every: 100
   visualize_beta_every: 1000   # plot beta_t patterns

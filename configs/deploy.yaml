@@ -10,7 +10,7 @@ action_expert:
   checkpoint: "checkpoints/phase1/action_expert.pt"
 
 metacontroller:
-  checkpoint: "checkpoints/phase2/metacontroller.pt"
+  checkpoint: "checkpoints/expert_distill/metacontroller.pt"
 
 rl_policy:
   checkpoint: "checkpoints/phase3/rl_policy.pt"

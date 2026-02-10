@@ -1,7 +1,8 @@
-"""Phase 2: MetaController Self-Supervised Training.
+"""Expert Distill: MetaController Self-Supervised Training.
 
-Trains the MetaController on the frozen action expert's residual stream.
-Discovers subtask boundaries (beta_t) without any boundary supervision.
+Distills temporal abstraction structure from the frozen action expert's
+residual stream. Discovers subtask boundaries (beta_t) without any
+boundary supervision.
 
 Loss:
     L(phi) = sum_t [ -ln p(a_t | o_{1:t}, z_{1:t})
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Phase2Config:
+class ExpertDistillConfig:
     alpha: float = 0.05          # KL weight (rate-distortion tradeoff)
     learning_rate: float = 1e-3
     weight_decay: float = 0.01
@@ -35,10 +36,10 @@ class Phase2Config:
     log_every: int = 100
     save_every: int = 5_000
     visualize_beta_every: int = 1_000
-    output_dir: str = "checkpoints/phase2/"
+    output_dir: str = "checkpoints/expert_distill/"
 
 
-class Phase2Trainer:
+class ExpertDistillTrainer:
     """Self-supervised MetaController training loop."""
 
     def __init__(
@@ -46,7 +47,7 @@ class Phase2Trainer:
         action_expert: nn.Module,
         metacontroller: MetaController,
         dataloader,
-        config: Phase2Config,
+        config: ExpertDistillConfig,
     ):
         self.expert = action_expert
         self.meta = metacontroller
@@ -155,7 +156,7 @@ class Phase2Trainer:
                 step += 1
 
         self._save_checkpoint(step)
-        logger.info("Phase 2 training complete.")
+        logger.info("Expert Distill training complete.")
 
     def _save_checkpoint(self, step: int) -> None:
         path = f"{self.config.output_dir}/metacontroller_step{step}.pt"
