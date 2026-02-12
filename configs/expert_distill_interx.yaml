@@ -1,0 +1,40 @@
+# Expert Distill: HHI-Specialized Temporal Abstraction Learning
+#
+# Uses the Phase 1 action expert (trained on Inter-X) to discover
+# human-human interaction-specific temporal boundaries.
+#
+# Key insight: Inter-X two-person interactions have natural temporal
+# structure — action/reaction patterns, turn-taking, synchronized
+# movements — that should emerge as beta_t switching patterns.
+#
+# Usage:
+#   python scripts/train_expert_distill.py --config configs/expert_distill_interx.yaml
+
+expert_checkpoint: "checkpoints/phase1_interx/action_expert_final.pt"
+data_root: "dataset/interx_lerobot"
+output_dir: "checkpoints/expert_distill_interx"
+
+model:
+  n_e: 1024                    # action expert width (gemma_300m)
+  n_z: 32                      # controller code dimension
+  rank: 32                     # low-rank controller U_t = B_t @ A_t
+  encoder_hidden: 128          # BiGRU hidden size
+  controlled_layer: 9          # mid-depth of 18 layers
+
+data:
+  max_length: 256
+  batch_size: 32
+  num_workers: 4
+  split: "train"
+
+training:
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  alpha: 0.05                  # KL weight
+  max_steps: 50000             # Inter-X train set is 9110 sequences
+  grad_clip: 1.0
+  save_every: 5000
+  log_every: 100
+
+logging:
+  wandb_project: "temporal-expert-distill-interx"

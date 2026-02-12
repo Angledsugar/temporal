@@ -1,0 +1,61 @@
+# Phase 1: Action Expert Pretraining — Inter-X HHI Focus
+#
+# Train Gemma-300M from scratch on human-human interaction data.
+# Inter-X provides the primary data source; Ego4D and UniHand provide
+# complementary single-person manipulation data for diversity.
+#
+# After this phase, theta is FROZEN for all subsequent phases.
+#
+# Usage:
+#   python scripts/train_phase1.py --config configs/phase1_interx.yaml
+#
+#   # Quick test (10 sequences, 1000 steps)
+#   python scripts/train_phase1.py \
+#       --data dataset/interx_npz --max-steps 1000 --batch-size 16
+
+model:
+  variant: "gemma_300m"
+  width: 1024
+  depth: 18
+  mlp_dim: 4096
+  num_heads: 8
+  num_kv_heads: 1
+  head_dim: 256
+  controlled_layer: 9    # mid-depth for optimal MetaController controllability
+
+flow_matching:
+  num_steps: 10          # K denoising steps at inference
+  sigma_min: 0.001
+  solver: "euler"
+
+data:
+  # Multi-dataset weighted sampling:
+  # Inter-X (LeRobot parquet) is primary, supplemented by Ego4D and UniHand (when available)
+  datasets:
+    - name: "interx"
+      path: "dataset/interx_lerobot"
+      weight: 1.0
+  action_representation: "canonical_ee"  # xyz + quat(3) + gripper
+  action_dim: 7
+  proprio_dim: 14
+  max_length: 256
+  num_workers: 4
+
+training:
+  batch_size: 8           # micro-batch per GPU step (RTX 4090 24GB)
+  grad_accum_steps: 8     # effective batch = 8 * 8 = 64
+  gradient_checkpointing: true
+  learning_rate: 3.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_steps: 200000       # ~50 epochs over Inter-X train set
+  grad_clip: 1.0
+  dtype: "bfloat16"
+
+  checkpoint:
+    save_every: 5000
+    output_dir: "checkpoints/phase1_interx/"
+
+logging:
+  wandb_project: "temporal-phase1-interx"
+  log_every: 100
