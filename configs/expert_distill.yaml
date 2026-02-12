@@ -2,47 +2,35 @@
 # Distills temporal abstraction structure from frozen action expert's residual stream.
 # Discovers subtask boundaries (beta_t) without supervision.
 
-action_expert:
-  checkpoint: "checkpoints/phase1/action_expert.pt"
-  frozen: true                 # CRITICAL: must be frozen
-  controlled_layer: 9          # mid-depth of 18 layers
+# Paths (overridable via CLI args)
+expert_checkpoint: "checkpoint/pi05_droid"
+data_root: "dataset/droid_100"
+output_dir: "checkpoint/expert_distill"
 
-metacontroller:
+model:
+  n_e: 1024                    # action expert width (gemma_300m)
   n_z: 32                      # controller code dimension
   rank: 32                     # low-rank controller U_t = B_t @ A_t
-  encoder:
-    type: "bigru"              # bidirectional GRU (non-causal)
-    hidden_size: 128
-  switching_unit:
-    hidden_size: 128
-  decoder:
-    type: "low_rank_hypernetwork"
+  encoder_hidden: 128          # BiGRU hidden size
+  controlled_layer: 9          # mid-depth of 18 layers
 
-loss:
+data:
+  max_length: 256              # max sequence length
+  batch_size: 32
+  num_workers: 4
+  split: "train"
+
+training:
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
   alpha: 0.05                  # KL weight (rate-distortion tradeoff)
                                # larger = coarser boundaries
                                # smaller = finer boundaries
-
-data:
-  # Same data as Phase 1, but used differently:
-  # we forward-pass through frozen expert and collect residual streams
-  dataset_path: "/data/ssv2/"
-  max_sequence_length: 256
-  target_fps: 50
-
-training:
-  batch_size: 128
-  learning_rate: 1.0e-3
-  weight_decay: 0.01
   max_steps: 200000
-  optimizer: "adamw"
   grad_clip: 1.0
-
-  checkpoint:
-    save_every: 5000
-    output_dir: "checkpoints/expert_distill/"
+  save_every: 5000
+  log_every: 100
 
 logging:
   wandb_project: "temporal-expert-distill"
-  log_every: 100
   visualize_beta_every: 1000   # plot beta_t patterns

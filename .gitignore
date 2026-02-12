@@ -10,11 +10,18 @@ venv/
 *.so
 *.dylib
 
-# Checkpoints
+# Checkpoints & model weights
 checkpoints/
+checkpoint/
 *.pt
 *.pth
 *.ckpt
+
+# Datasets (download via GCS)
+dataset/
+
+# UV lock file
+uv.lock
 
 # Results
 results/

@@ -15,10 +15,13 @@ Co-training causes temporal abstractions to collapse.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 
 from temporal.models.metacontroller import MetaController
 
@@ -44,7 +47,7 @@ class ExpertDistillTrainer:
 
     def __init__(
         self,
-        action_expert: nn.Module,
+        action_expert,
         metacontroller: MetaController,
         dataloader,
         config: ExpertDistillConfig,
@@ -53,11 +56,14 @@ class ExpertDistillTrainer:
         self.meta = metacontroller
         self.dataloader = dataloader
         self.config = config
+        self.device = next(metacontroller.parameters()).device
 
         # Freeze action expert -- CRITICAL
-        for param in self.expert.parameters():
-            param.requires_grad = False
-        self.expert.eval()
+        # ActionExpertWrapper is JAX-based; only freeze if it's an nn.Module
+        if isinstance(self.expert, nn.Module):
+            for param in self.expert.parameters():
+                param.requires_grad = False
+            self.expert.eval()
 
         self.optimizer = torch.optim.AdamW(
             self.meta.parameters(),
@@ -110,16 +116,19 @@ class ExpertDistillTrainer:
         }
 
     def train(self) -> None:
-        """Main training loop."""
+        """Main training loop with tqdm progress bar."""
         self.meta.train()
         step = 0
+        start_time = time.time()
+
+        pbar = tqdm(total=self.config.max_steps, desc="Expert Distill", unit="step")
 
         while step < self.config.max_steps:
             for batch in self.dataloader:
                 if step >= self.config.max_steps:
                     break
 
-                actions = batch["actions"].cuda()
+                actions = batch["actions"].to(self.device)
 
                 # Extract residual stream from frozen expert
                 with torch.no_grad():
@@ -143,11 +152,23 @@ class ExpertDistillTrainer:
                 )
                 self.optimizer.step()
 
+                # Update progress bar
+                elapsed = time.time() - start_time
+                steps_per_sec = (step + 1) / elapsed if elapsed > 0 else 0
+                pbar.set_postfix(
+                    loss=f"{metrics['total']:.4f}",
+                    kl=f"{metrics['kl']:.4f}",
+                    beta=f"{metrics['beta_sparsity']:.3f}",
+                    sps=f"{steps_per_sec:.1f}",
+                )
+                pbar.update(1)
+
                 if step % self.config.log_every == 0:
                     logger.info(
-                        f"Step {step}: loss={metrics['total']:.4f} "
-                        f"recon={metrics['recon']:.4f} kl={metrics['kl']:.4f} "
-                        f"beta_sparsity={metrics['beta_sparsity']:.3f}"
+                        f"Step {step}/{self.config.max_steps} | "
+                        f"loss={metrics['total']:.4f} recon={metrics['recon']:.4f} "
+                        f"kl={metrics['kl']:.4f} beta_sparsity={metrics['beta_sparsity']:.3f} | "
+                        f"{steps_per_sec:.1f} steps/s"
                     )
 
                 if step % self.config.save_every == 0 and step > 0:
@@ -155,10 +176,16 @@ class ExpertDistillTrainer:
 
                 step += 1
 
+        pbar.close()
         self._save_checkpoint(step)
-        logger.info("Expert Distill training complete.")
+        total_time = time.time() - start_time
+        logger.info(
+            f"Expert Distill complete: {step} steps in {total_time:.1f}s "
+            f"({step / total_time:.1f} steps/s)"
+        )
 
     def _save_checkpoint(self, step: int) -> None:
+        Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
         path = f"{self.config.output_dir}/metacontroller_step{step}.pt"
         torch.save(self.meta.state_dict(), path)
         logger.info(f"Saved checkpoint: {path}")
