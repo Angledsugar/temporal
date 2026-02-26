@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="description"
-        content="TempoRAL discovers action-expert-aware subtask boundaries via internal RL on human temporal abstractions.">
-  <meta name="keywords" content="TempoRAL, VLA, hierarchical RL, temporal abstraction, robot learning, action expert">
+        content="TempoRAL discovers cross-embodiment temporal abstractions from human demonstrations via internal RL in VLM backbones.">
+  <meta name="keywords" content="TempoRAL, VLA, hierarchical RL, temporal abstraction, robot learning, VLM backbone, cross-embodiment">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TempoRAL: Discovering Action-Expert-Aware Subtask Boundaries via Internal RL</title>
+  <title>TempoRAL: Cross-Embodiment Temporal Abstraction Transfer via Internal RL in VLM Backbones</title>
 
   <!-- Fonts: Google Sans + Noto Sans + Castoro (same as Nerfies) -->
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
@@ -88,9 +88,9 @@
       <div class="columns is-centered">
         <div class="column has-text-centered">
           <h1 class="title is-1 publication-title">
-            <span class="temporal-highlight">TempoRAL</span>: Discovering Action-Expert-Aware
-            Subtask Boundaries via Internal Reinforcement Learning
-            on Human Temporal Abstractions
+            <span class="temporal-highlight">TempoRAL</span>: Cross-Embodiment Temporal Abstraction
+            Transfer from Human Demonstrations via Internal Reinforcement
+            Learning in VLM Backbones
           </h1>
           <div class="is-size-5 publication-authors">
             <span class="author-block">Anonymous Authors</span>
@@ -116,20 +116,8 @@
               </span>
               <span class="link-block">
                 <a href="#" class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon"><i class="fab fa-youtube"></i></span>
-                  <span>Video</span>
-                </a>
-              </span>
-              <span class="link-block">
-                <a href="#" class="external-link button is-normal is-rounded is-dark">
                   <span class="icon"><i class="fab fa-github"></i></span>
                   <span>Code</span>
-                </a>
-              </span>
-              <span class="link-block">
-                <a href="#" class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon"><i class="fas fa-database"></i></span>
-                  <span>Data</span>
                 </a>
               </span>
             </div>
@@ -147,17 +135,17 @@
   <div class="container is-max-desktop">
     <div class="hero-body">
       <h2 class="subtitle has-text-centered">
-        <span class="temporal-highlight">TempoRAL</span> learns the right subtask granularity
-        for action experts by discovering boundaries from internal representations,
-        then optimizing them via Internal RL &mdash; exploiting the insight that
-        <strong>temporal boundary structures are embodiment-invariant</strong>.
+        <span class="temporal-highlight">TempoRAL</span> discovers temporal abstractions
+        from the VLM backbone's internal representations, enabling
+        <strong>cross-embodiment temporal abstraction transfer</strong>
+        from human demonstrations to robots.
       </h2>
     </div>
   </div>
 </section>
 
 
-<!-- ===== PIPELINE OVERVIEW (light background, replaces carousel) ===== -->
+<!-- ===== PIPELINE OVERVIEW ===== -->
 <section class="hero is-light is-small">
   <div class="hero-body">
     <div class="container is-max-desktop">
@@ -166,26 +154,20 @@
         <div class="pipeline-flow">
           <div class="pipeline-phase phase-1">
             <div class="phase-label">Phase 1</div>
-            <div class="phase-title">Action Expert</div>
-            <div class="phase-detail">Flow-matching on<br>human motion data</div>
+            <div class="phase-title">VLM Fine-Tune</div>
+            <div class="phase-detail">Human demo LoRA<br>on VLM backbone, then freeze</div>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-phase phase-2">
             <div class="phase-label">Phase 2</div>
-            <div class="phase-title">Expert Distill</div>
-            <div class="phase-detail">Self-supervised<br>boundary discovery</div>
+            <div class="phase-title">MC Discovery</div>
+            <div class="phase-detail">Self-supervised<br>boundary discovery on<br>frozen VLM residual stream</div>
           </div>
           <div class="pipeline-arrow">&rarr;</div>
           <div class="pipeline-phase phase-3">
             <div class="phase-label">Phase 3</div>
             <div class="phase-title">Internal RL</div>
-            <div class="phase-detail">Optimize granularity<br>for task success</div>
-          </div>
-          <div class="pipeline-arrow">&rarr;</div>
-          <div class="pipeline-phase phase-deploy">
-            <div class="phase-label">Deploy</div>
-            <div class="phase-title">VLM + Expert</div>
-            <div class="phase-detail">Capability prompt<br>+ runtime replan</div>
+            <div class="phase-detail">Novel task composition<br>in abstract-action space</div>
           </div>
         </div>
       </div>
@@ -194,7 +176,7 @@
 </section>
 
 
-<!-- ===== ABSTRACT + PROBLEM STATEMENT ===== -->
+<!-- ===== ABSTRACT + KEY HYPOTHESIS ===== -->
 <section class="section">
   <div class="container is-max-desktop">
 
@@ -204,67 +186,84 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Vision-Language-Action (VLA) systems increasingly adopt hierarchical architectures where a large
-            Vision-Language Model decomposes task instructions into subtask sequences and a lightweight action
-            expert executes them. A critical yet under-explored question arises: <em>at what granularity should
-            subtasks be specified for the action expert to reliably execute them?</em>
-          </p>
-          <p>
-            We observe that <strong>temporal abstraction structure</strong> &mdash; where one subtask ends and
-            another begins &mdash; is largely <strong>embodiment-invariant</strong>: a human grasping a cup and
-            a robot grasping a cup share the same boundary pattern despite kinematic differences.
+            Vision-Language-Action (VLA) systems such as &pi;<sub>0.5</sub> and GR00T adopt hierarchical architectures
+            in which a Vision-Language Model (VLM) backbone decomposes instructions into subtasks executed by an action expert.
+            We hypothesise that the VLM backbone &mdash; an autoregressive, causal transformer &mdash; develops
+            <em>temporally-abstract representations</em> of manipulation subtasks in its residual stream, and that
+            these representations are <strong>embodiment-invariant</strong>: a human grasping a cup and a robot grasping
+            a cup share the same reach&rarr;approach&rarr;close&rarr;lift boundary pattern despite vastly different kinematics.
           </p>
           <p>
             Building on this insight, we propose <strong>TempoRAL</strong>, a three-phase framework:
-            (1) pretrain an action expert on large-scale human manipulation data to learn embodiment-invariant temporal priors,
-            (2) discover subtask boundaries from the frozen expert's internal representations via a self-supervised MetaController,
-            (3) optimize subtask granularity for task success through Internal RL in the abstract controller-code space.
+            (1)&nbsp;fine-tune the VLM backbone on human manipulation demonstrations so that manipulation-specific
+            temporal structure is encoded in its internal representations, then freeze;
+            (2)&nbsp;train a self-supervised meta-controller on the frozen VLM backbone's residual stream to discover
+            subtask boundaries without any annotation; and
+            (3)&nbsp;apply Internal Reinforcement Learning in the discovered abstract-action space so that a causal
+            policy can compose novel subtask sequences for new tasks under sparse rewards.
           </p>
           <p>
-            At deployment, the learned boundary predictor serves a dual purpose: providing a
-            <strong>capability-aware prior</strong> for VLM prompting and enabling
-            <strong>runtime re-planning</strong> when the expert detects a subtask exceeds its capability.
+            A key ablation compares a base VLM (pretrained only) against a human-data-fine-tuned VLM, isolating the
+            contribution of human demonstrations to temporal abstraction formation.
+            We argue that this constitutes a novel form of <em>temporal abstraction transfer</em> &mdash; going beyond
+            the representation-level cross-embodiment alignment reported in prior work to transfer the
+            <em>temporal structure</em> of manipulation from humans to robots.
           </p>
         </div>
       </div>
     </div>
 
-    <!-- Problem Statement -->
+    <!-- Key Hypothesis -->
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
-        <h2 class="title is-3">The Subtask Granularity Problem</h2>
+        <h2 class="title is-3">Why VLM Backbone, Not Action Expert?</h2>
         <div class="content has-text-justified">
           <p>
-            Systems like &pi;<sub>0.5</sub> separate planning (VLM) from execution (action expert).
-            But the interface between them &mdash; the granularity of each subtask &mdash;
-            is set by heuristic prompt engineering with <em>no feedback from the action expert itself</em>.
+            A critical prerequisite of Internal RL is that the base model must be
+            <strong>autoregressive and causal</strong> &mdash; temporal abstractions emerge from
+            sequential next-token prediction over long horizons.
           </p>
           <table class="table is-striped is-fullwidth">
             <thead>
               <tr>
-                <th>Type</th>
-                <th>Example</th>
-                <th>Failure Mode</th>
+                <th>Property</th>
+                <th>VLM Backbone</th>
+                <th>Action Expert</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>Too abstract</strong></td>
-                <td>"Make coffee"</td>
-                <td>Requires dozens of contact phases; 300M expert cannot infer the full plan from a single embedding</td>
+                <td><strong>Prediction</strong></td>
+                <td>Autoregressive (next-token)</td>
+                <td>Diffusion / flow matching</td>
               </tr>
               <tr>
-                <td><strong>Too detailed</strong></td>
-                <td>"Rotate wrist 15&deg;"</td>
-                <td>Wastes VLM language modeling budget on trivially short segments; increases N, slowing overall inference</td>
+                <td><strong>Attention</strong></td>
+                <td>Causal (past &rarr; future)</td>
+                <td>Bidirectional (full chunk)</td>
               </tr>
               <tr>
-                <td><strong>Misaligned</strong></td>
-                <td>"Place cup under machine"</td>
-                <td>Sounds reasonable but may not respect the expert's <em>actual</em> capability boundary</td>
+                <td><strong>Temporal scope</strong></td>
+                <td>Episode-length sequences</td>
+                <td>Short action chunks (0.1&ndash;1s)</td>
+              </tr>
+              <tr>
+                <td><strong>Role</strong></td>
+                <td>Planner ("what to do next")</td>
+                <td>Executor ("how to move")</td>
+              </tr>
+              <tr>
+                <td><strong>Temporal abstraction</strong></td>
+                <td class="has-text-success has-text-weight-bold">Emerges naturally</td>
+                <td class="has-text-danger has-text-weight-bold">Cannot form</td>
               </tr>
             </tbody>
           </table>
+          <p>
+            <strong>Evidence:</strong> GR00T&nbsp;N1 found that <em>middle-layer</em> VLM embeddings outperform
+            final-layer embeddings for downstream policy success.
+            &pi;<sub>0.5</sub> already predicts subtask text explicitly within the VLM.
+          </p>
         </div>
       </div>
     </div>
@@ -280,64 +279,68 @@
       <div class="column is-full-width">
         <h2 class="title is-3">Method</h2>
 
-        <!-- Phase 1: Action Expert -->
+        <!-- Phase 1: VLM Fine-Tuning -->
         <div class="box method-card card-phase1">
           <h3 class="title is-4">
             <span class="tag is-danger">Phase 1</span>
-            &nbsp;Action Expert Pretraining
+            &nbsp;VLM Backbone Fine-Tuning on Human Demonstrations
           </h3>
           <div class="content has-text-justified">
             <p>
-              Pretrain a Gemma-300M transformer on large-scale human manipulation data using
-              conditional flow matching. Human hand joints are retargeted to a canonical
-              end-effector representation (position, orientation, gripper).
+              Fine-tune the VLM backbone on human manipulation demonstrations using next-token prediction
+              over observation-action sequences, then <strong>freeze</strong> for all subsequent phases.
             </p>
 
             <!-- Architecture specs -->
             <div class="columns is-mobile is-multiline" style="margin-top: 1rem;">
               <div class="column is-3-desktop is-6-mobile has-text-centered">
-                <div class="spec-value">311M</div>
-                <div class="spec-label">Parameters</div>
+                <div class="spec-value">1.7&ndash;2B</div>
+                <div class="spec-label">VLM Parameters</div>
               </div>
               <div class="column is-3-desktop is-6-mobile has-text-centered">
-                <div class="spec-value">1024</div>
+                <div class="spec-value">2048</div>
                 <div class="spec-label">Hidden Width</div>
               </div>
               <div class="column is-3-desktop is-6-mobile has-text-centered">
-                <div class="spec-value">18</div>
+                <div class="spec-value">18&ndash;28</div>
                 <div class="spec-label">Layers</div>
               </div>
               <div class="column is-3-desktop is-6-mobile has-text-centered">
-                <div class="spec-value">50Hz</div>
-                <div class="spec-label">Control Rate</div>
+                <div class="spec-value">LoRA</div>
+                <div class="spec-label">Fine-Tuning</div>
               </div>
             </div>
 
             <div class="math-block">
-              $$\mathcal{L}_{\text{FM}}(\theta) = \mathbb{E}_{t, \tau, \epsilon} \left\| v_\theta(a_\tau^{(t)}, t \mid s, q_\tau) - u_t(a_\tau^{(t)} \mid a_\tau) \right\|^2$$
+              $$\mathcal{L}(\theta) = \sum_{t=1}^{T} \left[ -\ln p_\theta(a_t \mid o_{1:t}) - \lambda \ln p_\theta(o_{t+1} \mid o_{1:t}) \right]$$
             </div>
 
             <p>
-              <strong>Data sources:</strong> Something-Something V2 (40%), Ego4D hand subset (40%),
-              UniHand (20%) &mdash; orders of magnitude more data than robot demonstrations.
+              <strong>Why human data:</strong> Human manipulation datasets are orders of magnitude larger than
+              robot data (Ego4D: 3,670 hrs vs Open X-Embodiment: ~10<sup>5</sup> trajectories).
+              The temporal boundary structure (reach&rarr;grasp&rarr;lift&rarr;place) is
+              <strong>embodiment-invariant</strong> &mdash; shared across humans and robots.
             </p>
             <p>
               <strong>After this phase, &theta; is frozen permanently.</strong>
-              Co-training with the MetaController causes temporal abstractions to collapse.
+              Co-training with the meta-controller causes temporal abstractions to collapse
+              (rate-distortion analysis in Kobayashi et al.).
             </p>
           </div>
         </div>
 
-        <!-- Phase 2: Expert Distill -->
+        <!-- Phase 2: MetaController Discovery -->
         <div class="box method-card card-phase2">
           <h3 class="title is-4">
             <span class="tag is-warning">Phase 2</span>
-            &nbsp;MetaController Discovery (Expert Distill)
+            &nbsp;Meta-Controller Discovery (Self-Supervised)
           </h3>
           <div class="content has-text-justified">
             <p>
-              Extract the residual stream at layer 9 from the frozen expert, then train a MetaController
-              (&sim;2M params) to discover subtask boundaries &mdash; purely self-supervised, no boundary annotations.
+              Extract the residual stream at mid-depth from the frozen VLM backbone
+              (e.g. layer 14 of 28 for Eagle, layer 9 of 18 for PaliGemma),
+              then train a meta-controller (~2M params) to discover subtask boundaries
+              &mdash; purely self-supervised, no boundary annotations.
             </p>
             <ul>
               <li><strong>Encoder</strong> (BiGRU): Processes full sequence &rarr; per-timestep latent statistics (&mu;<sub>t</sub>, &sigma;<sub>t</sub>)</li>
@@ -350,10 +353,10 @@
             </div>
 
             <p>
-              The additive residual stream intervention keeps the 300M model frozen:
+              The additive residual stream intervention keeps the VLM backbone frozen:
             </p>
             <div class="math-block">
-              $$e'_{t,l} = e_{t,l} + U_t \, e_{t,l}, \quad U_t = B_t A_t \in \mathbb{R}^{1024 \times 1024}, \; \text{rank} = 32$$
+              $$e'_{t,l} = e_{t,l} + U_t \, e_{t,l}, \quad U_t = B_t A_t \in \mathbb{R}^{2048 \times 2048}, \; \text{rank} = 32$$
             </div>
           </div>
         </div>
@@ -362,12 +365,13 @@
         <div class="box method-card card-phase3">
           <h3 class="title is-4">
             <span class="tag is-success">Phase 3</span>
-            &nbsp;Internal RL Optimization
+            &nbsp;Internal RL for Novel Task Composition
           </h3>
           <div class="content has-text-justified">
             <p>
-              Construct an "internal" MDP where the state is the residual stream, the action is a controller code,
-              and the action expert + physical world form the environment dynamics.
+              Construct an "internal" MDP where the state is the VLM backbone's residual stream,
+              the action is a controller code, and the VLM + action expert + physical world form
+              the environment dynamics.
               Only the causal RL policy (&psi;) is trained; everything else is frozen.
             </p>
 
@@ -376,8 +380,8 @@
                 <tr><th>Component</th><th>Definition</th></tr>
               </thead>
               <tbody>
-                <tr><td><strong>State</strong></td><td>Residual stream $e_{t,l} \in \mathbb{R}^{1024}$</td></tr>
-                <tr><td><strong>Action</strong></td><td>Controller code $z_t \in \mathbb{R}^{32}$</td></tr>
+                <tr><td><strong>State</strong></td><td>VLM residual stream $e_{t,l} \in \mathbb{R}^{2048}$</td></tr>
+                <tr><td><strong>Action</strong></td><td>Controller code $z_t \in \mathbb{R}^{16}$</td></tr>
                 <tr><td><strong>Reward</strong></td><td>Binary task success (sparse)</td></tr>
               </tbody>
             </table>
@@ -402,9 +406,9 @@
         <h2 class="title is-3">Emergent Subtask Boundaries</h2>
         <div class="content has-text-justified">
           <p>
-            After Expert Distill training, the switching gate &beta;<sub>t</sub> learns sparse, quasi-binary firing patterns
-            that align with semantic action transitions &mdash; <strong>without any boundary supervision</strong>.
-            This reflects what the action expert internally "considers" to be a single coherent action unit.
+            After meta-controller training, the switching gate &beta;<sub>t</sub> learns sparse, quasi-binary firing patterns
+            that align with semantic manipulation transitions &mdash; <strong>without any boundary supervision</strong>.
+            This reflects the VLM backbone's internal notion of "where one coherent behavioural plan ends and another begins."
           </p>
         </div>
 
@@ -491,7 +495,7 @@
 </section>
 
 
-<!-- ===== TEMPORAL CONTRACTION + DEPLOYMENT ===== -->
+<!-- ===== TEMPORAL CONTRACTION + ABLATION ===== -->
 <section class="section">
   <div class="container is-max-desktop">
     <div class="columns is-centered">
@@ -530,56 +534,112 @@
 
         <hr>
 
-        <!-- Deployment Pipeline -->
-        <h2 class="title is-3">Deployment Pipeline</h2>
+        <!-- Proposed Ablation -->
+        <h2 class="title is-3">Proposed Ablation: Human Data Contribution</h2>
         <div class="content has-text-justified">
           <p>
-            At deployment, the learned boundary predictor serves two simultaneous purposes:
-            a static capability-aware prior for efficient prompting, and a dynamic runtime re-planning trigger
-            for robustness.
+            The central experiment isolates whether human demonstration data enhances temporal
+            abstraction formation in the VLM backbone:
           </p>
         </div>
 
-        <div class="deploy-flow">
-          <div class="deploy-step">
-            <div class="step-icon" style="background: #3498db;">1</div>
-            <div class="step-content">
-              <h4>User Instruction</h4>
-              <p>"Make a cup of coffee"</p>
-            </div>
-          </div>
-          <div class="deploy-step">
-            <div class="step-icon" style="background: #f39c12;">2</div>
-            <div class="step-content">
-              <h4>VLM + Capability-Aware Prompt</h4>
-              <p>
-                The VLM receives a system prompt encoding the expert's learned capability profile,
-                generating all subtasks at once at the appropriate granularity.
-              </p>
-            </div>
-          </div>
-          <div class="deploy-step">
-            <div class="step-icon" style="background: #27ae60;">3</div>
-            <div class="step-content">
-              <h4>Sequential Execution with &beta;<sub>t</sub> Monitoring</h4>
-              <p>
-                For each subtask: Action Expert + MetaController execute while monitoring &beta;<sub>t</sub>.
-                Normal completion (&beta;<sub>t</sub> &rarr; 1 at expected time) proceeds to next subtask.
-              </p>
-            </div>
-          </div>
-          <div class="deploy-step">
-            <div class="step-icon" style="background: #e74c3c;">4</div>
-            <div class="step-content">
-              <h4>Runtime Re-Planning (if needed)</h4>
-              <p>
-                If &beta;<sub>t</sub> fires early or the expert's internal state deviates,
-                a re-planning request is sent to the VLM for finer-grained decomposition.
-              </p>
-            </div>
-          </div>
+        <table class="table is-striped is-fullwidth">
+          <thead>
+            <tr>
+              <th>Condition</th>
+              <th>VLM State</th>
+              <th>Fine-Tune Data</th>
+              <th>Expected Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>A (Base)</strong></td>
+              <td>Pretrained only</td>
+              <td>None</td>
+              <td>Weak temporal abstractions</td>
+            </tr>
+            <tr>
+              <td><strong>B (Human)</strong></td>
+              <td>+ LoRA fine-tune</td>
+              <td>Human demonstrations</td>
+              <td>Strong temporal abstractions</td>
+            </tr>
+            <tr>
+              <td><strong>C (Robot)</strong></td>
+              <td>+ LoRA fine-tune</td>
+              <td>Robot demonstrations</td>
+              <td>Comparable to B (cross-embodiment transfer)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="content has-text-justified">
+          <p>
+            <strong>Metrics:</strong>
+            (1) Linear probing accuracy for subtask decoding from VLM residual stream,
+            (2) &beta;<sub>t</sub> alignment with ground-truth subtask boundaries (NMI),
+            (3) Internal RL success rate on novel task compositions.
+          </p>
+          <p>
+            If <strong>A &lt; B</strong>: human fine-tuning enhances temporal abstractions.
+            If <strong>B &asymp; C</strong>: strong evidence for <em>cross-embodiment temporal abstraction transfer</em>.
+            If <strong>B &gt; C</strong>: human data produces <em>superior</em> temporal abstractions.
+          </p>
         </div>
 
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== TARGET VLA ARCHITECTURES ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Target VLA Architectures</h2>
+        <div class="content has-text-justified">
+          <table class="table is-bordered is-striped is-fullwidth">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>VLM Backbone</th>
+                <th>Layers</th>
+                <th>Hidden Dim</th>
+                <th>Controlled Layer</th>
+                <th>Action Expert</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>&pi;<sub>0.5</sub></td>
+                <td>PaliGemma (Gemma 2B)</td>
+                <td>18</td>
+                <td>2048</td>
+                <td>9 (L/2)</td>
+                <td>Gemma Expert 300M</td>
+              </tr>
+              <tr>
+                <td>GR00T N1.6</td>
+                <td>Eagle-2 (Qwen3 1.7B)</td>
+                <td>28</td>
+                <td>2048</td>
+                <td>14 (L/2)</td>
+                <td>DiT 32L</td>
+              </tr>
+              <tr>
+                <td>Qwen2.5-VL-7B</td>
+                <td>Qwen2.5</td>
+                <td>28</td>
+                <td>3584</td>
+                <td>14 (L/2)</td>
+                <td>(to be added)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -595,8 +655,8 @@
         <div class="content has-text-justified">
           <ol>
             <li>
-              <strong>Frozen expert is critical.</strong>
-              Co-training the action expert with the MetaController causes temporal abstractions to collapse.
+              <strong>Frozen VLM backbone is critical.</strong>
+              Co-training the VLM with the meta-controller causes temporal abstractions to collapse.
               Freezing &theta; creates an information bottleneck that forces &beta;<sub>t</sub> to capture
               genuine temporal structure.
             </li>
@@ -607,19 +667,19 @@
               (~10<sup>8</sup> samples vs ~10<sup>5</sup> robot trajectories).
             </li>
             <li>
+              <strong>VLM backbone, not action expert.</strong>
+              The VLM is autoregressive and causal &mdash; exactly the setting where temporal abstractions
+              emerge. The action expert (diffusion/flow matching, bidirectional) cannot form them.
+            </li>
+            <li>
               <strong>Residual stream intervention, not weight modification.</strong>
-              The MetaController applies additive control on residual streams:
-              e' = e + U&middot;e. This adds only ~2M parameters on top of the frozen 311M expert.
+              The meta-controller applies additive control on VLM residual streams:
+              e' = e + U&middot;e. This adds only ~2M parameters on top of the frozen 1.7&ndash;2B VLM backbone.
             </li>
             <li>
               <strong>Non-causal to causal transition.</strong>
-              Expert Distill uses a non-causal BiGRU (sees future) for optimal boundary discovery.
-              Optimize replaces this with a causal GRU for online execution where the future is unavailable.
-            </li>
-            <li>
-              <strong>Dual deployment mechanism.</strong>
-              Static capability-aware prompting for efficiency (all subtasks generated at once)
-              + dynamic &beta;<sub>t</sub> monitoring for robustness (graceful degradation when initial decomposition is imperfect).
+              Phase 2 uses a non-causal BiGRU (sees future) for optimal boundary discovery.
+              Phase 3 replaces this with a causal GRU for online execution.
             </li>
           </ol>
         </div>
@@ -639,24 +699,26 @@
 
           <h3 class="title is-4">Vision-Language-Action Models</h3>
           <p>
-            RT-2, &pi;<sub>0</sub>, &pi;<sub>0.5</sub>, OpenVLA, and Octo have advanced VLA capabilities,
-            but all treat the subtask-action interface as a fixed design choice.
-            None learns or adapts it from data or the action expert's capabilities.
+            RT-2, &pi;<sub>0</sub>, &pi;<sub>0.5</sub>, OpenVLA, Octo, and GR00T N1 have advanced VLA capabilities,
+            but all treat the subtask&ndash;action interface as a fixed design choice.
+            None exploits the VLM backbone's internal temporal representations to discover subtask boundaries from data.
           </p>
 
           <h3 class="title is-4">Temporal Abstraction &amp; Hierarchical RL</h3>
           <p>
             The Options framework, Option-Critic, HIRO, and CompILE address temporal abstraction in RL.
-            Most recently, Kobayashi et al. (2025) proposed Internal RL, showing that a MetaController
+            Most recently, Kobayashi et al. (2025) proposed Internal RL, showing that a meta-controller
             trained on a frozen autoregressive model's residual stream discovers temporal abstractions
-            aligned with ground-truth subgoals. We extend this from gridworld/MuJoCo to VLA action experts.
+            aligned with ground-truth subgoals. Internal RL has only been demonstrated in gridworld and
+            MuJoCo; its potential for VLM backbones in VLA systems is unexplored.
           </p>
 
           <h3 class="title is-4">Learning from Human Data</h3>
           <p>
             LAPA, MT-&pi;, and Being-H0 transfer low-level actions or visual features from human data.
-            We transfer <em>temporal abstraction structure</em>, which is more abstract and therefore
-            more embodiment-invariant.
+            Physical Intelligence's analysis of &pi;<sub>0.5</sub> revealed emergent cross-embodiment alignment
+            at scale. We go further: transferring <em>temporal abstraction structure</em>, which is more abstract
+            and therefore more embodiment-invariant than representations alone.
           </p>
 
         </div>
@@ -671,9 +733,9 @@
   <div class="container is-max-desktop content">
     <h2 class="title">BibTeX</h2>
     <pre><code>@article{temporal2025,
-  title     = {TempoRAL: Discovering Action-Expert-Aware Subtask
-               Boundaries via Internal Reinforcement Learning
-               on Human Temporal Abstractions},
+  title     = {TempoRAL: Cross-Embodiment Temporal Abstraction Transfer
+               from Human Demonstrations via Internal Reinforcement
+               Learning in VLM Backbones},
   author    = {Anonymous},
   journal   = {Under Review},
   year      = {2025}
@@ -700,6 +762,8 @@
             <li>Octo Model Team. <em>Octo: An Open-Source Generalist Robot Policy.</em> arXiv:2405.12213, 2024.</li>
             <li>Open X-Embodiment Collaboration. <em>Open X-Embodiment: Robotic Learning Datasets and RT-X Models.</em> arXiv:2310.08864, 2023.</li>
             <li>K. Grauman et al. <em>Ego4D: Around the World in 3,000 Hours of Egocentric Video.</em> CVPR, 2022.</li>
+            <li>NVIDIA. <em>GR00T N1: An Open Foundation Model for Generalist Humanoid Robots.</em> arXiv:2503.14734, 2025.</li>
+            <li>E. J. Hu et al. <em>LoRA: Low-Rank Adaptation of Large Language Models.</em> ICLR, 2022.</li>
           </ol>
         </div>
       </div>

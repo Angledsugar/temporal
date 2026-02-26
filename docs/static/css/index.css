@@ -97,8 +97,7 @@ body {
 .phase-3 { background: rgba(39,174,96,0.1); border: 2px solid #27ae60; }
 .phase-3 .phase-label { color: #27ae60; }
 
-.phase-deploy { background: rgba(52,152,219,0.1); border: 2px solid #3498db; }
-.phase-deploy .phase-label { color: #3498db; }
+/* phase-deploy removed (deployment section moved to future work) */
 
 .pipeline-arrow {
   font-size: 1.4em;
