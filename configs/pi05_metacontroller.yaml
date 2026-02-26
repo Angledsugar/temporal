@@ -39,8 +39,12 @@ internal_rl:
   clip_epsilon: 0.2
 
 data:
-  type: "dummy"
+  type: "dummy"              # "dummy" for testing, "lerobot" for real data
   num_samples: 100
+  # LeRobot dataset settings (uncomment for real data):
+  # type: "lerobot"
+  # repo_id: "lerobot/libero_object_no_noops"
+  # image_size: [224, 224]
 
 seed: 0
 checkpoint_dir: "checkpoints/vla/pi05"

@@ -1,5 +1,5 @@
 [project]
-name = "internalrl"
+name = "temporal"
 version = "0.1.0"
 description = "Emergent Temporal Abstractions in Autoregressive Models Enable Hierarchical RL"
 readme = "README.md"
@@ -24,6 +24,10 @@ vla = [
     "pillow",
     "accelerate",
     "einops",
+    "huggingface_hub",
+    "pandas",
+    "pyarrow",
+    "torchvision",
 ]
 groot = [
     "transformers>=4.51.0",
@@ -45,6 +49,7 @@ groot = [
     "opencv-python-headless",
     "albumentations",
     "tyro",
+    "huggingface_hub",
 ]
 
 [dependency-groups]

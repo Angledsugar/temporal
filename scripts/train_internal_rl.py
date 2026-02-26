@@ -4,11 +4,11 @@
 import argparse
 import torch
 
-from internalrl.training.internal_rl_train import InternalRLTrainer
-from internalrl.models.transformer import CausalTransformer
-from internalrl.models.metacontroller import MetaController
-from internalrl.envs.tasks import POST_TRAINING_TASK
-from internalrl.utils.config import Config
+from temporal.training.internal_rl_train import InternalRLTrainer
+from temporal.models.transformer import CausalTransformer
+from temporal.models.metacontroller import MetaController
+from temporal.envs.tasks import POST_TRAINING_TASK
+from temporal.utils.config import Config
 
 
 def main():

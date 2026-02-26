@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from internalrl.vla.data.dummy_dataset import (
+from temporal.vla.data.dummy_dataset import (
     DummyGrootDataset,
     DummyPi05Dataset,
     DummyResidualDataset,

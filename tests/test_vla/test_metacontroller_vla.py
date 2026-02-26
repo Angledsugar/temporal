@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from internalrl.vla.models.metacontroller_vla import (
+from temporal.vla.models.metacontroller_vla import (
     VLAMetaController,
     VLAMetaControllerConfig,
 )

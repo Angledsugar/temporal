@@ -4,9 +4,9 @@
 import argparse
 import torch
 
-from internalrl.training.pretrain import BaseModelTrainer
-from internalrl.data.dataset import TrajectoryDataset
-from internalrl.utils.config import Config
+from temporal.training.pretrain import BaseModelTrainer
+from temporal.data.dataset import TrajectoryDataset
+from temporal.utils.config import Config
 
 
 def main():

@@ -8,7 +8,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from internalrl.vla.models.metacontroller_vla import (
+from temporal.vla.models.metacontroller_vla import (
     VLAMetaController,
     VLAMetaControllerConfig,
 )

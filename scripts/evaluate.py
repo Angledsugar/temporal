@@ -4,15 +4,15 @@
 import argparse
 import torch
 
-from internalrl.models.transformer import CausalTransformer
-from internalrl.models.metacontroller import MetaController
-from internalrl.models.rl_policy import CausalSSMPolicy
-from internalrl.data.dataset import TrajectoryDataset
-from internalrl.evaluation.linear_probing import run_linear_probing
-from internalrl.evaluation.beta_analysis import analyze_beta_alignment
-from internalrl.evaluation.rl_evaluation import evaluate_policy
-from internalrl.envs.tasks import POST_TRAINING_TASK
-from internalrl.utils.config import Config
+from temporal.models.transformer import CausalTransformer
+from temporal.models.metacontroller import MetaController
+from temporal.models.rl_policy import CausalSSMPolicy
+from temporal.data.dataset import TrajectoryDataset
+from temporal.evaluation.linear_probing import run_linear_probing
+from temporal.evaluation.beta_analysis import analyze_beta_alignment
+from temporal.evaluation.rl_evaluation import evaluate_policy
+from temporal.envs.tasks import POST_TRAINING_TASK
+from temporal.utils.config import Config
 
 
 def main():

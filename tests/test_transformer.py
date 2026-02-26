@@ -3,7 +3,7 @@
 import torch
 import pytest
 
-from internalrl.models.transformer import CausalTransformer
+from temporal.models.transformer import CausalTransformer
 
 
 class TestCausalTransformer:

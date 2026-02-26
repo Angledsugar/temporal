@@ -3,12 +3,12 @@
 import torch
 import pytest
 
-from internalrl.models.ssm import SSMBlock, SSMStack, LinearRecurrentUnit
-from internalrl.models.metacontroller import (
+from temporal.models.ssm import SSMBlock, SSMStack, LinearRecurrentUnit
+from temporal.models.metacontroller import (
     MetaController, InternalSequenceEmbedder,
     ControllerEncoder, SwitchingUnit, ControllerDecoder,
 )
-from internalrl.models.rl_policy import CausalSSMPolicy
+from temporal.models.rl_policy import CausalSSMPolicy
 
 
 class TestSSM:

@@ -77,7 +77,7 @@ class Pi05Wrapper(BaseVLAWrapper, nn.Module):
         self._controlled_layer = config.controlled_layer
 
         # Install JAX-free shims, then add OpenPI to sys.path
-        from internalrl.vla.models._openpi_shims import install_shims
+        from temporal.vla.models._openpi_shims import install_shims
         install_shims()
         _ensure_openpi_importable(config.openpi_path)
 

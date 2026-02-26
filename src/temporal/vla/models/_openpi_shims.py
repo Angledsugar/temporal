@@ -6,7 +6,7 @@ stub modules in sys.modules so that Python never tries to import the
 real JAX/Flax packages.
 
 Usage:
-    from internalrl.vla.models._openpi_shims import install_shims
+    from temporal.vla.models._openpi_shims import install_shims
     install_shims()
     # Now OpenPI PyTorch imports work without JAX
 """
@@ -138,7 +138,7 @@ def _install_openpi_model_shims() -> None:
     if "openpi.models.gemma" in sys.modules:
         return  # Already loaded (e.g. real JAX is available)
 
-    from internalrl.vla.models._gemma_config import get_config, GemmaConfig
+    from temporal.vla.models._gemma_config import get_config, GemmaConfig
 
     # Ensure openpi.models namespace exists
     if "openpi.models" not in sys.modules:

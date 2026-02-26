@@ -39,8 +39,13 @@ internal_rl:
   clip_epsilon: 0.2
 
 data:
-  type: "dummy"
+  type: "dummy"              # "dummy" for testing, "lerobot" for real data
   num_samples: 100
+  # LeRobot dataset settings (uncomment for real data):
+  # type: "lerobot"
+  # local_path: "./Isaac-GR00T/demo_data/cube_to_bowl_5"
+  # repo_id: "IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot"
+  # image_size: [224, 224]
 
 seed: 0
 checkpoint_dir: "checkpoints/vla/groot"

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Setup script for RTX 4090 training server
-# Installs all dependencies for internalRL + VLA (π0.5 and Groot)
+# Installs all dependencies for temporal + VLA (π0.5 and Groot)
 #
 # Usage:
 #   git clone --recursive <repo-url>
-#   cd internalRL
+#   cd temporal
 #   bash scripts/setup_server.sh
 #
 # Prerequisites:
@@ -19,7 +19,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "================================================"
-echo "  InternalRL VLA Setup — RTX 4090 Server"
+echo "  TempoRAL VLA Setup — RTX 4090 Server"
 echo "================================================"
 echo "Project root: $PROJECT_ROOT"
 echo ""
@@ -108,15 +108,15 @@ import sys
 sys.path.insert(0, 'src')
 
 # Test base package
-from internalrl.models.metacontroller import MetaController
-print('  ✓ Base internalRL package')
+from temporal.models.metacontroller import MetaController
+print('  ✓ Base temporal package')
 
 # Test VLA metacontroller
-from internalrl.vla.models.metacontroller_vla import VLAMetaController, VLAMetaControllerConfig
+from temporal.vla.models.metacontroller_vla import VLAMetaController, VLAMetaControllerConfig
 print('  ✓ VLA MetaController')
 
 # Test OpenPI shims + PI0Pytorch
-from internalrl.vla.models._openpi_shims import install_shims
+from temporal.vla.models._openpi_shims import install_shims
 install_shims()
 sys.path.insert(0, '$PROJECT_ROOT/openpi/src')
 from openpi.models_pytorch.pi0_pytorch import PI0Pytorch
@@ -128,8 +128,8 @@ from gr00t.model.gr00t_n1d6.gr00t_n1d6 import Gr00tN1d6
 print('  ✓ Gr00tN1d6 (Groot)')
 
 # Test wrappers
-from internalrl.vla.models.pi05_wrapper import Pi05Wrapper, Pi05WrapperConfig
-from internalrl.vla.models.groot_wrapper import GrootWrapper, GrootWrapperConfig
+from temporal.vla.models.pi05_wrapper import Pi05Wrapper, Pi05WrapperConfig
+from temporal.vla.models.groot_wrapper import GrootWrapper, GrootWrapperConfig
 print('  ✓ VLA Wrappers')
 
 # Check GPU

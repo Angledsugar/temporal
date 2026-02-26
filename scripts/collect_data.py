@@ -4,8 +4,8 @@
 import argparse
 from pathlib import Path
 
-from internalrl.data.collector import collect_trajectories
-from internalrl.envs.tasks import PRETRAINING_TASKS
+from temporal.data.collector import collect_trajectories
+from temporal.envs.tasks import PRETRAINING_TASKS
 
 
 def main():

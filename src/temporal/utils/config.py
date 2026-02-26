@@ -176,9 +176,13 @@ class VLAInternalRLConfig:
 @dataclass
 class VLADataConfig:
     """Configuration for VLA data loading."""
-    type: str = "dummy"             # "dummy" or "real"
+    type: str = "dummy"             # "dummy" | "lerobot"
     num_samples: int = 100
     data_dir: str = "data/vla"
+    # LeRobot dataset settings (used when type="lerobot")
+    repo_id: str = ""               # HuggingFace repo ID
+    local_path: str = ""            # Local path (takes priority over repo_id)
+    image_size: tuple[int, int] = (224, 224)
 
 
 @dataclass

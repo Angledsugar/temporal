@@ -30,9 +30,9 @@ import torch
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from internalrl.utils.config import VLAConfig
-from internalrl.vla.data.dummy_dataset import DummyResidualDataset
-from internalrl.vla.models.metacontroller_vla import (
+from temporal.utils.config import VLAConfig
+from temporal.vla.data.dummy_dataset import DummyResidualDataset
+from temporal.vla.models.metacontroller_vla import (
     VLAMetaController,
     VLAMetaControllerConfig,
 )
@@ -147,7 +147,7 @@ def run_with_config(config_path: str) -> None:
     logger.info(f"Loading {model_type} model from config: {config_path}")
 
     if model_type == "pi05":
-        from internalrl.vla.models.pi05_wrapper import Pi05Wrapper, Pi05WrapperConfig
+        from temporal.vla.models.pi05_wrapper import Pi05Wrapper, Pi05WrapperConfig
 
         wrapper_config = Pi05WrapperConfig(
             checkpoint_path=config.model.checkpoint_path,
@@ -164,7 +164,7 @@ def run_with_config(config_path: str) -> None:
         wrapper = Pi05Wrapper(wrapper_config)
 
     elif model_type == "groot":
-        from internalrl.vla.models.groot_wrapper import GrootWrapper, GrootWrapperConfig
+        from temporal.vla.models.groot_wrapper import GrootWrapper, GrootWrapperConfig
 
         wrapper_config = GrootWrapperConfig(
             checkpoint_path=config.model.checkpoint_path,
@@ -201,7 +201,7 @@ def run_with_config(config_path: str) -> None:
     mc = VLAMetaController(mc_config)
 
     # Create trainer
-    from internalrl.vla.training.vla_metacontroller_train import VLAMetacontrollerTrainer
+    from temporal.vla.training.vla_metacontroller_train import VLAMetacontrollerTrainer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     trainer = VLAMetacontrollerTrainer(
@@ -214,13 +214,34 @@ def run_with_config(config_path: str) -> None:
     # Create dataset
     if config.data.type == "dummy":
         if model_type == "pi05":
-            from internalrl.vla.data.dummy_dataset import DummyPi05Dataset
+            from temporal.vla.data.dummy_dataset import DummyPi05Dataset
             dataset = DummyPi05Dataset(num_samples=config.data.num_samples)
         else:
-            from internalrl.vla.data.dummy_dataset import DummyGrootDataset
+            from temporal.vla.data.dummy_dataset import DummyGrootDataset
             dataset = DummyGrootDataset(num_samples=config.data.num_samples)
+    elif config.data.type == "lerobot":
+        local_path = config.data.local_path or None
+        repo_id = config.data.repo_id
+        if model_type == "groot":
+            from temporal.vla.data.groot_dataset import GrootLeRobotDataset
+            dataset = GrootLeRobotDataset(
+                repo_id=repo_id,
+                local_path=local_path,
+                action_horizon=config.model.action_horizon,
+                image_size=config.data.image_size,
+            )
+        else:
+            from temporal.vla.data.pi05_dataset import Pi05LeRobotDataset
+            dataset = Pi05LeRobotDataset(
+                repo_id=repo_id,
+                local_path=local_path,
+                action_horizon=config.model.action_horizon,
+                image_size=config.data.image_size,
+                max_token_len=config.model.max_token_len,
+            )
+        logger.info(f"Loaded LeRobot dataset: {len(dataset)} samples")
     else:
-        raise NotImplementedError("Real data loading not yet implemented")
+        raise ValueError(f"Unknown data type: {config.data.type}")
 
     # Train
     trainer.train(

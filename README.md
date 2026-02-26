@@ -4,41 +4,11 @@
 
 Discovers and transfers temporal abstractions from human demonstrations to robot manipulation via VLM backbone internal representations, building on [Internal RL](https://arxiv.org/abs/2512.20605).
 
-## Key Hypothesis
-
-Human demonstration data induces **embodiment-invariant temporal abstractions** in VLM backbones that can be discovered unsupervised by a metacontroller and transferred cross-embodiment to robots.
-
 ## Three-Phase Framework
 
 1. **Phase 1**: Fine-tune VLM backbone on human manipulation demos (LoRA), then freeze
-2. **Phase 2**: Train self-supervised metacontroller on frozen VLM's residual stream to discover subtask boundaries (no annotations)
-3. **Phase 3**: Internal RL in abstract controller-code space for novel task composition under sparse rewards
-
-## Project Structure
-
-```
-src/internalrl/
-  envs/           # Gridworld-Pinpad environment, expert policy
-  models/         # Transformer, SSM, Metacontroller, RL policy
-  training/       # Pretrain, metacontroller, internal RL, GRPO
-  evaluation/     # Linear probing, beta analysis, RL evaluation
-  vla/            # VLA extension (π0.5, Groot N1.6)
-    models/       # BaseVLAWrapper (ABC), Pi05Wrapper, GrootWrapper
-    training/     # VLA metacontroller training (model-agnostic)
-    data/         # Dummy datasets (residual, π0.5 format, Groot format)
-
-Isaac-GR00T/      # Git submodule: NVIDIA Groot N1.6
-openpi/           # Git submodule: Physical Intelligence π0.5
-
-scripts/
-  run_all.py      # Gridworld pipeline (--quick)
-  run_vla.py      # VLA pipeline (--model pi05|groot)
-  setup_server.sh # One-command 4090 server setup
-
-configs/
-  pi05_metacontroller.yaml   # π0.5 config (RTX 4090 ~13GB)
-  groot_metacontroller.yaml  # Groot config (RTX 4090 ~16GB)
-```
+2. **Phase 2**: Train self-supervised metacontroller on frozen VLM's residual stream to discover subtask boundaries
+3. **Phase 3**: Internal RL in abstract controller-code space for novel task composition
 
 ## Target VLA Architectures
 
@@ -47,163 +17,42 @@ configs/
 | π0.5 | PaliGemma (Gemma 2B) | 18 | 2048 | 9 (L/2) | Gemma Expert 300M |
 | Groot N1.6 | Eagle (Qwen3 1.7B) | 28 | 2048 | 12 (paper) | DiT 32L |
 
-## Why VLM Backbone (not Action Head)
-
-The metacontroller targets the **VLM backbone** because:
-- VLM is **autoregressive + causal** → temporal abstractions emerge (per Internal RL prerequisites)
-- Action Head uses **diffusion/flow matching** → no sequential prediction → no temporal abstraction
-- Groot paper: middle-layer (12th) LLM embeddings outperform final layer
-- VLM = planner ("what to do"), Action Head = executor ("how to move")
-
 ---
 
-## Setup
+## Quick Start (서버 설정 + 학습)
 
-### Prerequisites
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) package manager
-- CUDA 12.x (for GPU training)
-
-### Quick Setup (Development)
+### 1. 환경 설치
 
 ```bash
-# Clone with submodules
+# 클론
 git clone --recursive <repo-url>
-cd internalRL
+cd temporal
 
-# Install base dependencies
-uv sync
-
-# Install VLA dependencies (π0.5)
-uv pip install -e ".[vla]"
-
-# Install Groot dependencies (if using Groot)
-uv pip install -e ".[groot]"
-```
-
-### Full Setup (RTX 4090 Training Server)
-
-```bash
-git clone --recursive <repo-url>
-cd internalRL
+# 방법 A: 원커맨드 설치 (모든 의존성 + 패치 + 테스트)
 bash scripts/setup_server.sh
+
+# 방법 B: 수동 설치
+uv sync                           # 기본 의존성
+uv pip install -e ".[vla]"        # VLA 의존성 (π0.5)
+uv pip install -e ".[groot]"      # Groot 의존성
+
+# 테스트 실행으로 설치 확인
+uv run pytest tests/ -v           # 67 tests (66 passed, 1 skipped)
 ```
 
-This script:
-1. Installs all Python dependencies (base + VLA + Groot)
-2. Applies `transformers_replace` patches (required for π0.5 AdaRMS)
-3. Verifies all imports (PI0Pytorch, Gr00tN1d6, wrappers)
-4. Runs 53 tests
-5. Shows GPU information
+**요구사항**: Python 3.11+, CUDA 12.x, [uv](https://docs.astral.sh/uv/), GPU (RTX 4090 24GB 권장)
 
-### transformers_replace Patches (π0.5)
-
-π0.5 requires patched `transformers` with AdaRMS and custom attention. The setup script handles this automatically. For manual setup:
+### 2. Gridworld PoC 검증 (선택)
 
 ```bash
-# Backup and apply patches
-OPENPI_REPLACE="openpi/src/openpi/models_pytorch/transformers_replace"
-TRANSFORMERS_DIR=".venv/lib/python3.11/site-packages/transformers"
-
-for f in $OPENPI_REPLACE/*.py; do
-    target=$(find $TRANSFORMERS_DIR -name "$(basename $f)" -type f | head -1)
-    [ -n "$target" ] && cp "$target" "${target}.bak" && cp "$f" "$target"
-done
-```
-
----
-
-## Gridworld PoC
-
-Validates the 3-phase framework on a simple Gridworld-Pinpad task before scaling to VLAs.
-
-```bash
-# Full pipeline (quick mode: ~2 min)
+# 3-stage 파이프라인 전체 실행 (~2분)
 uv run python scripts/run_all.py --quick
-
-# Run tests (29 gridworld tests)
-uv run pytest tests/test_gridworld.py tests/test_metacontroller.py tests/test_transformer.py -v
 ```
 
-**Results**: 29/29 tests passing, all 3 stages run end-to-end.
+### 3. VLA Dummy 검증
 
----
+실제 모델/데이터 없이 파이프라인 구조 검증:
 
-## VLA Training Guide
-
-### Overview
-
-The VLA training pipeline has 3 stages:
-
-```
-Stage 1: VLM Fine-tuning (LoRA)     → done externally (OpenPI / Isaac-GR00T tools)
-Stage 2: Metacontroller Training     → this project (vla_metacontroller_train.py)
-Stage 3: Internal RL                 → stub (needs robot simulator)
-```
-
-**Stage 2 is the main training target.** The metacontroller learns temporal abstractions from the frozen VLM's residual stream.
-
-### Stage 2: Metacontroller Training
-
-#### Step 1: Prepare Model Weights
-
-**π0.5**: Download or use your fine-tuned π0.5 weights (safetensors format):
-```bash
-# Set checkpoint path in config
-# configs/pi05_metacontroller.yaml
-model:
-  checkpoint_path: "/path/to/pi05_weights.safetensors"
-```
-
-**Groot N1.6**: Use your fine-tuned Groot checkpoint:
-```bash
-# configs/groot_metacontroller.yaml
-model:
-  checkpoint_path: "/path/to/groot_checkpoint"
-```
-
-#### Step 2: Prepare Data
-
-현재 dummy data로 구조 검증 완료. 실제 학습 시:
-
-**Residual 데이터**: VLA에 에피소드를 통과시켜 중간 레이어 hidden states를 추출 → 저장
-```python
-# data format per sample:
-{
-    "residual": Tensor(seq_len, 2048),   # VLM hidden states at controlled_layer
-    "actions": Tensor(action_horizon, action_dim),  # target actions
-    "noise": Tensor(action_horizon, action_dim),    # flow matching noise
-    "time": Tensor(),                                # diffusion timestep
-}
-```
-
-**또는 Full forward 데이터**: 원본 에피소드를 그대로 전달 (wrapper가 residual 추출)
-```python
-# π0.5 format:
-{
-    "images": {"base_0_rgb": Tensor(3, 224, 224), ...},
-    "image_masks": {"base_0_rgb": Tensor(bool), ...},
-    "tokenized_prompt": Tensor(max_token_len),
-    "tokenized_prompt_mask": Tensor(max_token_len, bool),
-    "state": Tensor(state_dim),
-    "actions": Tensor(action_horizon, action_dim),
-}
-
-# Groot format:
-{
-    "images": {"cam_0": Tensor(3, 224, 224)},
-    "state": Tensor(state_dim),
-    "actions": Tensor(action_horizon, action_dim),
-    "text": "pick up the red block",
-    "input_ids": Tensor(seq_len, long),
-    "attention_mask": Tensor(seq_len, long),
-}
-```
-
-#### Step 3: Run Training
-
-**Dummy data (구조 검증)**:
 ```bash
 # π0.5 dummy training
 uv run python scripts/run_vla.py --model pi05 --dummy-data --quick
@@ -212,33 +61,144 @@ uv run python scripts/run_vla.py --model pi05 --dummy-data --quick
 uv run python scripts/run_vla.py --model groot --dummy-data --quick
 ```
 
-**Full training with config**:
-```bash
-# π0.5
-uv run python scripts/run_vla.py --model pi05 --config configs/pi05_metacontroller.yaml
+---
 
-# Groot
-uv run python scripts/run_vla.py --model groot --config configs/groot_metacontroller.yaml
+## 실제 데이터로 학습하기
+
+### Step 1: 모델 가중치 준비
+
+**Groot N1.6** (finetuned checkpoint 필요):
+```bash
+# configs/groot_metacontroller.yaml 수정
+model:
+  checkpoint_path: "/path/to/groot_checkpoint"
 ```
 
-#### Step 4: Key Hyperparameters
+**π0.5** (safetensors 가중치 필요):
+```bash
+# configs/pi05_metacontroller.yaml 수정
+model:
+  checkpoint_path: "/path/to/pi05_weights.safetensors"
+```
+
+### Step 2: 데이터셋 준비
+
+3가지 방법 중 선택:
+
+#### 방법 A: HuggingFace LeRobot 데이터셋 (권장)
+
+YAML config에서 `data.type: "lerobot"` 설정:
+
+```yaml
+# configs/groot_metacontroller.yaml
+data:
+  type: "lerobot"
+  repo_id: "IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot"
+  image_size: [224, 224]
+```
+
+```yaml
+# configs/pi05_metacontroller.yaml
+data:
+  type: "lerobot"
+  repo_id: "lerobot/libero_object_no_noops"
+  image_size: [224, 224]
+```
+
+첫 실행 시 HuggingFace에서 자동 다운로드됩니다.
+
+**사용 가능한 LeRobot 데이터셋 예시**:
+| Dataset | repo_id | Robot | Action Dim |
+|---------|---------|-------|------------|
+| LIBERO-10 | `IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot` | Franka Panda | 7 |
+| LIBERO Goal | `IPEC-COMMUNITY/libero_goal_no_noops_1.0.0_lerobot` | Franka Panda | 7 |
+| LIBERO Object | `IPEC-COMMUNITY/libero_object_no_noops_1.0.0_lerobot` | Franka Panda | 7 |
+
+#### 방법 B: 로컬 LeRobot 형식 데이터셋
+
+GROOT demo 데이터 또는 자체 변환한 데이터:
+
+```yaml
+data:
+  type: "lerobot"
+  local_path: "./Isaac-GR00T/demo_data/cube_to_bowl_5"
+  image_size: [224, 224]
+```
+
+**로컬 데이터 요구 구조**:
+```
+dataset_dir/
+├── meta/
+│   ├── info.json          # fps, features, 경로 패턴
+│   ├── episodes.jsonl     # 에피소드별 길이/태스크
+│   ├── tasks.jsonl        # 태스크 설명
+│   ├── stats.json         # 정규화 통계 (min/max/mean/std)
+│   └── modality.json      # (Groot용) joint group 매핑
+├── data/chunk-000/
+│   └── episode_000000.parquet  # state, action, timestamp 등
+└── videos/chunk-000/
+    └── observation.images.front/
+        └── episode_000000.mp4
+```
+
+#### 방법 C: Dummy 데이터 (구조 검증용)
+
+```yaml
+data:
+  type: "dummy"
+  num_samples: 100
+```
+
+### Step 3: 학습 실행
+
+```bash
+# Groot 학습
+uv run python scripts/run_vla.py --model groot \
+    --config configs/groot_metacontroller.yaml
+
+# π0.5 학습
+uv run python scripts/run_vla.py --model pi05 \
+    --config configs/pi05_metacontroller.yaml
+```
+
+### Step 4: 모니터링
+
+```bash
+# TensorBoard
+tensorboard --logdir logs/vla/
+
+# 체크포인트 위치
+ls checkpoints/vla/groot/   # Groot 체크포인트
+ls checkpoints/vla/pi05/    # π0.5 체크포인트
+```
+
+**핵심 모니터링 메트릭**:
+- `action_loss`: 감소해야 함 (action 예측 학습)
+- `kl_loss`: 0.1~0.3에서 안정화 (0으로 collapse하면 안 됨)
+- `beta_mean`: 0.3~0.6이 건강한 범위 (subtask 전환 빈도)
+
+---
+
+## 핵심 하이퍼파라미터
 
 | Parameter | π0.5 | Groot | Description |
 |-----------|------|-------|-------------|
 | `embed_dim` | 2048 | 2048 | VLM hidden dimension |
 | `latent_dim` | 16 | 16 | Metacontroller latent code z_t |
-| `controlled_layer` | 9 | 12 | VLM layer to intervene |
-| `kl_alpha` | 0.17 | 0.17 | KL loss weight (temporal switching) |
+| `controlled_layer` | 9 | 12 | VLM 개입 레이어 |
+| `kl_alpha` | 0.17 | 0.17 | KL loss 가중치 |
 | `controller_rank` | 32 | 32 | Low-rank controller U_t rank |
-| `batch_size` | 4 | 2 | Per-GPU batch size |
+| `batch_size` | 4 | 2 | per-GPU batch size |
 | `lr` | 1e-4 | 1e-4 | AdamW learning rate |
-| `train_steps` | 64000 | 64000 | Total training steps |
+| `train_steps` | 64000 | 64000 | 학습 스텝 수 |
 
-**VRAM estimates** (RTX 4090, 24GB):
+**VRAM 사용량 (RTX 4090, 24GB)**:
 - π0.5: ~13GB (VLM 4GB + Expert 0.6GB + activations 8GB + MC 0.01GB)
 - Groot: ~16GB (VLM 3.4GB + DiT 2GB + activations 10GB + MC 0.01GB)
 
-### Training Architecture
+---
+
+## 학습 아키텍처
 
 ```
 Frozen VLA (no grad)          Trainable MC (~5M params)
@@ -254,37 +214,44 @@ Frozen VLA (no grad)          Trainable MC (~5M params)
 └─────────────────────┘
 ```
 
-- VLM is **completely frozen** → optimizer state only for MC (~40MB)
-- MC outputs: `e_controlled`, `z_seq` (latent codes), `beta_seq` (switching gate), `kl_loss`
-- Loss = action MSE + `kl_alpha` × KL divergence
-
-### Monitoring
-
-Training outputs to TensorBoard:
-```bash
-tensorboard --logdir logs/vla/
-```
-
-Key metrics to watch:
-- `action_loss`: should decrease (model learns to predict actions)
-- `kl_loss`: should stabilize around 0.1-0.3 (not collapse to 0)
-- `beta_mean`: average switching gate (~0.3-0.6 is healthy)
-
-Checkpoints saved to `checkpoints/vla/{model}/`.
+- VLM은 **완전히 동결** → optimizer state는 MC만 (~40MB)
+- Loss = action MSE + kl_alpha × KL divergence
+- MC가 발견하는 것: subtask 경계 (β_t), 추상 제어 코드 (z_t)
 
 ---
+
+## Project Structure
+
+```
+src/temporal/
+  envs/           # Gridworld-Pinpad environment, expert policy
+  models/         # Transformer, SSM, Metacontroller, RL policy
+  training/       # Pretrain, metacontroller, internal RL, GRPO
+  evaluation/     # Linear probing, beta analysis, RL evaluation
+  vla/            # VLA extension (π0.5, Groot N1.6)
+    models/       # BaseVLAWrapper (ABC), Pi05Wrapper, GrootWrapper
+    training/     # VLA metacontroller training (model-agnostic)
+    data/         # Dummy + real LeRobot datasets
+
+Isaac-GR00T/      # NVIDIA Groot N1.6
+openpi/           # Physical Intelligence π0.5
+
+scripts/
+  run_all.py      # Gridworld pipeline (--quick)
+  run_vla.py      # VLA pipeline (--model pi05|groot)
+  setup_server.sh # One-command server setup
+
+configs/
+  pi05_metacontroller.yaml   # π0.5 config (~13GB VRAM)
+  groot_metacontroller.yaml  # Groot config (~16GB VRAM)
+```
 
 ## Tests
 
 ```bash
-# All tests (53)
-uv run pytest tests/ -v
-
-# Gridworld only (29)
-uv run pytest tests/test_gridworld.py tests/test_metacontroller.py tests/test_transformer.py -v
-
-# VLA only (24)
-uv run pytest tests/test_vla/ -v
+uv run pytest tests/ -v              # 전체 (67 tests)
+uv run pytest tests/test_vla/ -v     # VLA만 (38 tests)
+uv run pytest tests/test_gridworld.py tests/test_metacontroller.py -v  # Gridworld만
 ```
 
 ---

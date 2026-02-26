@@ -13,19 +13,19 @@ from pathlib import Path
 
 import torch
 
-from internalrl.data.collector import collect_trajectories
-from internalrl.data.dataset import TrajectoryDataset
-from internalrl.envs.tasks import PRETRAINING_TASKS, POST_TRAINING_TASK
-from internalrl.models.transformer import CausalTransformer
-from internalrl.models.metacontroller import MetaController
-from internalrl.models.rl_policy import CausalSSMPolicy
-from internalrl.training.pretrain import BaseModelTrainer
-from internalrl.training.metacontroller_train import MetacontrollerTrainer
-from internalrl.training.internal_rl_train import InternalRLTrainer
-from internalrl.evaluation.linear_probing import run_linear_probing
-from internalrl.evaluation.beta_analysis import analyze_beta_alignment
-from internalrl.evaluation.rl_evaluation import evaluate_policy
-from internalrl.utils.config import Config, BaseModelConfig, MetacontrollerConfig, InternalRLConfig
+from temporal.data.collector import collect_trajectories
+from temporal.data.dataset import TrajectoryDataset
+from temporal.envs.tasks import PRETRAINING_TASKS, POST_TRAINING_TASK
+from temporal.models.transformer import CausalTransformer
+from temporal.models.metacontroller import MetaController
+from temporal.models.rl_policy import CausalSSMPolicy
+from temporal.training.pretrain import BaseModelTrainer
+from temporal.training.metacontroller_train import MetacontrollerTrainer
+from temporal.training.internal_rl_train import InternalRLTrainer
+from temporal.evaluation.linear_probing import run_linear_probing
+from temporal.evaluation.beta_analysis import analyze_beta_alignment
+from temporal.evaluation.rl_evaluation import evaluate_policy
+from temporal.utils.config import Config, BaseModelConfig, MetacontrollerConfig, InternalRLConfig
 
 
 def get_quick_config() -> Config:

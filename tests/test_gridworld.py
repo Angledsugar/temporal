@@ -3,9 +3,9 @@
 import numpy as np
 import pytest
 
-from internalrl.envs.gridworld import GridworldPinpad
-from internalrl.envs.expert import ExpertPolicy
-from internalrl.envs.tasks import (
+from temporal.envs.gridworld import GridworldPinpad
+from temporal.envs.expert import ExpertPolicy
+from temporal.envs.tasks import (
     GRID_SIZE, NUM_COLORS, NUM_WALLS, MAX_STEPS, OBS_DIM,
     PRETRAINING_TASKS, POST_TRAINING_TASK,
 )

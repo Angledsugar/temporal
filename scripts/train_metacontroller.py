@@ -4,10 +4,10 @@
 import argparse
 import torch
 
-from internalrl.training.metacontroller_train import MetacontrollerTrainer
-from internalrl.models.transformer import CausalTransformer
-from internalrl.data.dataset import TrajectoryDataset
-from internalrl.utils.config import Config
+from temporal.training.metacontroller_train import MetacontrollerTrainer
+from temporal.models.transformer import CausalTransformer
+from temporal.data.dataset import TrajectoryDataset
+from temporal.utils.config import Config
 
 
 def main():
