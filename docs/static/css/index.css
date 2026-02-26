@@ -1,0 +1,324 @@
+/* ===== Nerfies-style TempoRAL Project Page — Custom CSS ===== */
+/* Layered on top of Bulma. Only includes styles Bulma does not provide. */
+
+/* ===== Typography (Nerfies font assignments) ===== */
+body {
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.publication-title {
+  font-family: 'Google Sans', sans-serif;
+}
+
+.publication-authors {
+  font-family: 'Google Sans', sans-serif;
+}
+
+.publication-authors a {
+  color: hsl(204, 86%, 53%) !important;
+}
+
+.publication-authors a:hover {
+  text-decoration: underline;
+}
+
+.author-block {
+  display: inline-block;
+}
+
+.link-block a {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+/* ===== TempoRAL brand highlight ===== */
+.temporal-highlight {
+  color: #f39c12;
+  font-weight: 700;
+}
+
+/* ===== Teaser ===== */
+.teaser .hero-body {
+  padding-top: 0;
+  padding-bottom: 3rem;
+}
+
+.teaser .subtitle {
+  font-family: 'Google Sans', sans-serif;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ===== Pipeline Flow Diagram ===== */
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: nowrap;
+  min-width: 700px;
+  overflow-x: auto;
+}
+
+.pipeline-phase {
+  text-align: center;
+  padding: 16px 20px;
+  border-radius: 10px;
+  min-width: 150px;
+}
+
+.pipeline-phase .phase-label {
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.pipeline-phase .phase-title {
+  font-size: 0.95em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pipeline-phase .phase-detail {
+  font-size: 0.78em;
+  opacity: 0.8;
+}
+
+/* Phase color coding */
+.phase-1 { background: rgba(231,76,60,0.1); border: 2px solid #e74c3c; }
+.phase-1 .phase-label { color: #e74c3c; }
+
+.phase-2 { background: rgba(243,156,18,0.1); border: 2px solid #f39c12; }
+.phase-2 .phase-label { color: #f39c12; }
+
+.phase-3 { background: rgba(39,174,96,0.1); border: 2px solid #27ae60; }
+.phase-3 .phase-label { color: #27ae60; }
+
+.phase-deploy { background: rgba(52,152,219,0.1); border: 2px solid #3498db; }
+.phase-deploy .phase-label { color: #3498db; }
+
+.pipeline-arrow {
+  font-size: 1.4em;
+  color: #7f8c8d;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+
+/* ===== Method Cards ===== */
+.method-card {
+  margin-bottom: 1.5rem;
+}
+
+.card-phase1 { border-left: 4px solid #e74c3c; }
+.card-phase2 { border-left: 4px solid #f39c12; }
+.card-phase3 { border-left: 4px solid #27ae60; }
+
+.math-block {
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.spec-value {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: hsl(204, 86%, 53%);
+  line-height: 1.2;
+}
+
+.spec-label {
+  font-size: 0.82em;
+  color: #7f8c8d;
+  margin-top: 4px;
+}
+
+/* ===== Beta Visualization (dark themed, unique to TempoRAL) ===== */
+.beta-viz {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 28px 32px;
+  color: #ecf0f1;
+  font-family: 'Courier New', monospace;
+  overflow-x: auto;
+}
+
+.beta-viz .viz-title {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #f39c12;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.beta-row {
+  display: flex;
+  align-items: center;
+  margin: 4px 0;
+  font-size: 0.88em;
+}
+
+.beta-label {
+  width: 60px;
+  flex-shrink: 0;
+  color: #95a5a6;
+}
+
+.beta-values {
+  display: flex;
+  gap: 2px;
+}
+
+.beta-cell {
+  width: 42px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.beta-high { background: rgba(231, 76, 60, 0.8); color: white; }
+.beta-low { background: rgba(52, 152, 219, 0.15); color: #7f8c8d; }
+
+.beta-annotations {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.beta-anno-cell {
+  width: 42px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  color: #f39c12;
+  font-weight: 600;
+}
+
+/* ===== Contraction Comparison ===== */
+.contraction-box.standard {
+  border-top: 3px solid #e74c3c;
+}
+
+.contraction-box.temporal {
+  border-top: 3px solid #27ae60;
+}
+
+/* ===== Deployment Flow ===== */
+.deploy-flow {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 28px;
+  font-size: 0.92em;
+}
+
+.deploy-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.deploy-step:last-child {
+  margin-bottom: 0;
+}
+
+.deploy-step::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 38px;
+  bottom: -20px;
+  width: 2px;
+  background: #dee2e6;
+}
+
+.deploy-step:last-child::before {
+  display: none;
+}
+
+.step-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 0.85em;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.step-content h4 {
+  font-size: 1em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.step-content p {
+  margin: 0;
+  font-size: 0.9em;
+  color: #7f8c8d;
+}
+
+/* ===== BibTeX Copy Button ===== */
+#BibTeX pre {
+  position: relative;
+}
+
+.bibtex-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #ecf0f1;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.bibtex-copy-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* ===== References ===== */
+.references {
+  font-size: 0.88em;
+  color: #7f8c8d;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .pipeline-flow {
+    flex-direction: column;
+    min-width: auto;
+  }
+  .pipeline-arrow {
+    transform: rotate(90deg);
+  }
+  .pipeline-phase {
+    min-width: auto;
+    width: 100%;
+  }
+  .beta-viz {
+    padding: 16px;
+  }
+}

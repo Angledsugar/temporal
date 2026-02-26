@@ -1,0 +1,47 @@
+# Groot N1.6 VLA Metacontroller Configuration
+# RTX 4090 optimized (~16GB VRAM estimated)
+
+model:
+  type: "groot"
+  checkpoint_path: ""  # path to Groot N1.6 checkpoint
+  groot_path: "./Isaac-GR00T"
+  model_name: "nvidia/Eagle-Block2A-2B-v2"
+  select_layer: 16       # Eagle backbone uses layers 0-15
+  action_horizon: 16
+  action_dim: 29
+  state_dim: 29
+  dtype: "bfloat16"
+  gradient_checkpointing: true
+
+metacontroller:
+  embed_dim: 2048
+  latent_dim: 16
+  gru_dim: 64
+  seq_embed_dim: 64
+  encoder_hidden: 128
+  decoder_hidden: 64
+  controller_rank: 32
+  controlled_layer: 12   # Middle layer (Groot N1 paper: layer 12 optimal)
+  kl_alpha: 0.17
+  train_steps: 64000
+  batch_size: 2          # smaller due to DiT action head memory
+  lr: 1.0e-4
+  weight_decay: 0.03
+
+internal_rl:
+  policy_type: "ssm"
+  policy_depth: 1
+  policy_embed_dim: 2048
+  beta_threshold: 0.5
+  train_steps: 100000
+  batch_size: 2
+  lr: 3.0e-5
+  clip_epsilon: 0.2
+
+data:
+  type: "dummy"
+  num_samples: 100
+
+seed: 0
+checkpoint_dir: "checkpoints/vla/groot"
+log_dir: "logs/vla/groot"

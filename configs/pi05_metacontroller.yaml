@@ -1,0 +1,47 @@
+# π0.5 VLA Metacontroller Configuration
+# RTX 4090 optimized (~13GB VRAM estimated)
+
+model:
+  type: "pi05"
+  checkpoint_path: ""  # path to pi0.5 safetensors weights
+  openpi_path: "./openpi"
+  paligemma_variant: "gemma_2b"
+  action_expert_variant: "gemma_300m"
+  action_dim: 32
+  action_horizon: 50
+  max_token_len: 200
+  dtype: "bfloat16"
+  gradient_checkpointing: true
+
+metacontroller:
+  embed_dim: 2048
+  latent_dim: 16
+  gru_dim: 64
+  seq_embed_dim: 64
+  encoder_hidden: 128
+  decoder_hidden: 64
+  controller_rank: 32
+  controlled_layer: 9    # L/2 for 18-layer VLM
+  kl_alpha: 0.17
+  train_steps: 64000
+  batch_size: 4
+  lr: 1.0e-4
+  weight_decay: 0.03
+
+internal_rl:
+  policy_type: "ssm"
+  policy_depth: 1
+  policy_embed_dim: 2048
+  beta_threshold: 0.5
+  train_steps: 100000
+  batch_size: 4
+  lr: 3.0e-5
+  clip_epsilon: 0.2
+
+data:
+  type: "dummy"
+  num_samples: 100
+
+seed: 0
+checkpoint_dir: "checkpoints/vla/pi05"
+log_dir: "logs/vla/pi05"

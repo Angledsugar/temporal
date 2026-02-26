@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="TempoRAL discovers action-expert-aware subtask boundaries via internal RL on human temporal abstractions.">
+  <meta name="keywords" content="TempoRAL, VLA, hierarchical RL, temporal abstraction, robot learning, action expert">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TempoRAL: Discovering Action-Expert-Aware Subtask Boundaries via Internal RL</title>
+
+  <!-- Fonts: Google Sans + Noto Sans + Castoro (same as Nerfies) -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <!-- Bulma CSS Framework -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Academicons (for arXiv icon, same as Nerfies) -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ]
+        });"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <!-- jQuery (Nerfies pattern) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+  <!-- Custom JS -->
+  <script defer src="./static/js/index.js"></script>
+</head>
+<body>
+
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-start" style="flex-grow: 1; justify-content: center;">
+      <a class="navbar-item" href="#">
+        <span class="icon"><i class="fas fa-home"></i></span>
+      </a>
+      <div class="navbar-item has-dropdown is-hoverable">
+        <a class="navbar-link">More Research</a>
+        <div class="navbar-dropdown">
+          <a class="navbar-item" href="https://www.physicalintelligence.company/blog/pi0">
+            &pi;<sub>0</sub>
+          </a>
+          <a class="navbar-item" href="https://www.physicalintelligence.company/blog/pi05">
+            &pi;<sub>0.5</sub>
+          </a>
+          <a class="navbar-item" href="https://arxiv.org/abs/2512.20605">
+            Internal RL (Kobayashi et al.)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ===== HERO: Title, Authors, Links ===== -->
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">
+            <span class="temporal-highlight">TempoRAL</span>: Discovering Action-Expert-Aware
+            Subtask Boundaries via Internal Reinforcement Learning
+            on Human Temporal Abstractions
+          </h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">Anonymous Authors</span>
+          </div>
+          <div class="is-size-6 publication-authors" style="margin-top: 4px; color: #7f8c8d;">
+            <span class="author-block">Under Review</span>
+          </div>
+
+          <!-- Publication Links -->
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="ai ai-arxiv"></i></span>
+                  <span>arXiv</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-youtube"></i></span>
+                  <span>Video</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-database"></i></span>
+                  <span>Data</span>
+                </a>
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== TEASER: TL;DR ===== -->
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <div class="hero-body">
+      <h2 class="subtitle has-text-centered">
+        <span class="temporal-highlight">TempoRAL</span> learns the right subtask granularity
+        for action experts by discovering boundaries from internal representations,
+        then optimizing them via Internal RL &mdash; exploiting the insight that
+        <strong>temporal boundary structures are embodiment-invariant</strong>.
+      </h2>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== PIPELINE OVERVIEW (light background, replaces carousel) ===== -->
+<section class="hero is-light is-small">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <h2 class="title is-3 has-text-centered">Three-Phase Pipeline</h2>
+      <div style="overflow-x: auto;">
+        <div class="pipeline-flow">
+          <div class="pipeline-phase phase-1">
+            <div class="phase-label">Phase 1</div>
+            <div class="phase-title">Action Expert</div>
+            <div class="phase-detail">Flow-matching on<br>human motion data</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-phase phase-2">
+            <div class="phase-label">Phase 2</div>
+            <div class="phase-title">Expert Distill</div>
+            <div class="phase-detail">Self-supervised<br>boundary discovery</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-phase phase-3">
+            <div class="phase-label">Phase 3</div>
+            <div class="phase-title">Internal RL</div>
+            <div class="phase-detail">Optimize granularity<br>for task success</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+          <div class="pipeline-phase phase-deploy">
+            <div class="phase-label">Deploy</div>
+            <div class="phase-title">VLM + Expert</div>
+            <div class="phase-detail">Capability prompt<br>+ runtime replan</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== ABSTRACT + PROBLEM STATEMENT ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+
+    <!-- Abstract -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Vision-Language-Action (VLA) systems increasingly adopt hierarchical architectures where a large
+            Vision-Language Model decomposes task instructions into subtask sequences and a lightweight action
+            expert executes them. A critical yet under-explored question arises: <em>at what granularity should
+            subtasks be specified for the action expert to reliably execute them?</em>
+          </p>
+          <p>
+            We observe that <strong>temporal abstraction structure</strong> &mdash; where one subtask ends and
+            another begins &mdash; is largely <strong>embodiment-invariant</strong>: a human grasping a cup and
+            a robot grasping a cup share the same boundary pattern despite kinematic differences.
+          </p>
+          <p>
+            Building on this insight, we propose <strong>TempoRAL</strong>, a three-phase framework:
+            (1) pretrain an action expert on large-scale human manipulation data to learn embodiment-invariant temporal priors,
+            (2) discover subtask boundaries from the frozen expert's internal representations via a self-supervised MetaController,
+            (3) optimize subtask granularity for task success through Internal RL in the abstract controller-code space.
+          </p>
+          <p>
+            At deployment, the learned boundary predictor serves a dual purpose: providing a
+            <strong>capability-aware prior</strong> for VLM prompting and enabling
+            <strong>runtime re-planning</strong> when the expert detects a subtask exceeds its capability.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Problem Statement -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">The Subtask Granularity Problem</h2>
+        <div class="content has-text-justified">
+          <p>
+            Systems like &pi;<sub>0.5</sub> separate planning (VLM) from execution (action expert).
+            But the interface between them &mdash; the granularity of each subtask &mdash;
+            is set by heuristic prompt engineering with <em>no feedback from the action expert itself</em>.
+          </p>
+          <table class="table is-striped is-fullwidth">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Example</th>
+                <th>Failure Mode</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Too abstract</strong></td>
+                <td>"Make coffee"</td>
+                <td>Requires dozens of contact phases; 300M expert cannot infer the full plan from a single embedding</td>
+              </tr>
+              <tr>
+                <td><strong>Too detailed</strong></td>
+                <td>"Rotate wrist 15&deg;"</td>
+                <td>Wastes VLM language modeling budget on trivially short segments; increases N, slowing overall inference</td>
+              </tr>
+              <tr>
+                <td><strong>Misaligned</strong></td>
+                <td>"Place cup under machine"</td>
+                <td>Sounds reasonable but may not respect the expert's <em>actual</em> capability boundary</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ===== METHOD ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Method</h2>
+
+        <!-- Phase 1: Action Expert -->
+        <div class="box method-card card-phase1">
+          <h3 class="title is-4">
+            <span class="tag is-danger">Phase 1</span>
+            &nbsp;Action Expert Pretraining
+          </h3>
+          <div class="content has-text-justified">
+            <p>
+              Pretrain a Gemma-300M transformer on large-scale human manipulation data using
+              conditional flow matching. Human hand joints are retargeted to a canonical
+              end-effector representation (position, orientation, gripper).
+            </p>
+
+            <!-- Architecture specs -->
+            <div class="columns is-mobile is-multiline" style="margin-top: 1rem;">
+              <div class="column is-3-desktop is-6-mobile has-text-centered">
+                <div class="spec-value">311M</div>
+                <div class="spec-label">Parameters</div>
+              </div>
+              <div class="column is-3-desktop is-6-mobile has-text-centered">
+                <div class="spec-value">1024</div>
+                <div class="spec-label">Hidden Width</div>
+              </div>
+              <div class="column is-3-desktop is-6-mobile has-text-centered">
+                <div class="spec-value">18</div>
+                <div class="spec-label">Layers</div>
+              </div>
+              <div class="column is-3-desktop is-6-mobile has-text-centered">
+                <div class="spec-value">50Hz</div>
+                <div class="spec-label">Control Rate</div>
+              </div>
+            </div>
+
+            <div class="math-block">
+              $$\mathcal{L}_{\text{FM}}(\theta) = \mathbb{E}_{t, \tau, \epsilon} \left\| v_\theta(a_\tau^{(t)}, t \mid s, q_\tau) - u_t(a_\tau^{(t)} \mid a_\tau) \right\|^2$$
+            </div>
+
+            <p>
+              <strong>Data sources:</strong> Something-Something V2 (40%), Ego4D hand subset (40%),
+              UniHand (20%) &mdash; orders of magnitude more data than robot demonstrations.
+            </p>
+            <p>
+              <strong>After this phase, &theta; is frozen permanently.</strong>
+              Co-training with the MetaController causes temporal abstractions to collapse.
+            </p>
+          </div>
+        </div>
+
+        <!-- Phase 2: Expert Distill -->
+        <div class="box method-card card-phase2">
+          <h3 class="title is-4">
+            <span class="tag is-warning">Phase 2</span>
+            &nbsp;MetaController Discovery (Expert Distill)
+          </h3>
+          <div class="content has-text-justified">
+            <p>
+              Extract the residual stream at layer 9 from the frozen expert, then train a MetaController
+              (&sim;2M params) to discover subtask boundaries &mdash; purely self-supervised, no boundary annotations.
+            </p>
+            <ul>
+              <li><strong>Encoder</strong> (BiGRU): Processes full sequence &rarr; per-timestep latent statistics (&mu;<sub>t</sub>, &sigma;<sub>t</sub>)</li>
+              <li><strong>Switching Unit</strong>: Predicts &beta;<sub>t</sub> &isin; [0,1] &mdash; switch to new controller or maintain</li>
+              <li><strong>Decoder</strong> (Hypernetwork): z<sub>t</sub> &rarr; low-rank controller U<sub>t</sub> = B<sub>t</sub>A<sub>t</sub></li>
+            </ul>
+
+            <div class="math-block">
+              $$\mathcal{L}(\phi) = \sum_{t=1}^{T} \left[ -\ln p_{\theta,\phi}(a_t \mid o_{1:t}, z_{1:t}) + \alpha \, D_{\text{KL}}\!\left(\mathcal{N}(\mu_t, \sigma_t^2) \| \mathcal{N}(0, I)\right) \right]$$
+            </div>
+
+            <p>
+              The additive residual stream intervention keeps the 300M model frozen:
+            </p>
+            <div class="math-block">
+              $$e'_{t,l} = e_{t,l} + U_t \, e_{t,l}, \quad U_t = B_t A_t \in \mathbb{R}^{1024 \times 1024}, \; \text{rank} = 32$$
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: Internal RL -->
+        <div class="box method-card card-phase3">
+          <h3 class="title is-4">
+            <span class="tag is-success">Phase 3</span>
+            &nbsp;Internal RL Optimization
+          </h3>
+          <div class="content has-text-justified">
+            <p>
+              Construct an "internal" MDP where the state is the residual stream, the action is a controller code,
+              and the action expert + physical world form the environment dynamics.
+              Only the causal RL policy (&psi;) is trained; everything else is frozen.
+            </p>
+
+            <table class="table is-bordered is-fullwidth">
+              <thead>
+                <tr><th>Component</th><th>Definition</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>State</strong></td><td>Residual stream $e_{t,l} \in \mathbb{R}^{1024}$</td></tr>
+                <tr><td><strong>Action</strong></td><td>Controller code $z_t \in \mathbb{R}^{32}$</td></tr>
+                <tr><td><strong>Reward</strong></td><td>Binary task success (sparse)</td></tr>
+              </tbody>
+            </table>
+
+            <div class="math-block">
+              $$\nabla_\psi J = \mathbb{E}\!\left[\sum_{m=1}^{M} A_m \, \nabla_\psi \ln \pi_\psi(z_{t_m} \mid e_{1:t_m, l})\right]$$
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== EMERGENT BOUNDARIES ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Emergent Subtask Boundaries</h2>
+        <div class="content has-text-justified">
+          <p>
+            After Expert Distill training, the switching gate &beta;<sub>t</sub> learns sparse, quasi-binary firing patterns
+            that align with semantic action transitions &mdash; <strong>without any boundary supervision</strong>.
+            This reflects what the action expert internally "considers" to be a single coherent action unit.
+          </p>
+        </div>
+
+        <!-- Beta Visualization -->
+        <div class="beta-viz">
+          <div class="viz-title">Learned &beta;<sub>t</sub> Pattern (No Boundary Supervision)</div>
+          <div class="beta-row">
+            <span class="beta-label">Time</span>
+            <div class="beta-values">
+              <div class="beta-cell" style="background:none; color:#95a5a6;">1</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">2</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">3</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">4</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">5</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">6</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">7</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">8</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">9</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">10</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">11</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">12</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">13</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">14</div>
+              <div class="beta-cell" style="background:none; color:#95a5a6;">15</div>
+            </div>
+          </div>
+          <div class="beta-row">
+            <span class="beta-label">&beta;<sub>t</sub></span>
+            <div class="beta-values">
+              <div class="beta-cell beta-high">1</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-high">1</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-high">1</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-high">1</div>
+              <div class="beta-cell beta-low">0</div>
+              <div class="beta-cell beta-low">0</div>
+            </div>
+          </div>
+          <div class="beta-row">
+            <span class="beta-label"></span>
+            <div class="beta-annotations">
+              <div class="beta-anno-cell">&uarr;</div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell">&uarr;</div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell">&uarr;</div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell">&uarr;</div>
+              <div class="beta-anno-cell"></div>
+              <div class="beta-anno-cell"></div>
+            </div>
+          </div>
+          <div class="beta-row">
+            <span class="beta-label"></span>
+            <div class="beta-annotations">
+              <div class="beta-anno-cell" style="width: 126px; justify-content: center; color: #e74c3c; font-size: 0.8em;">reach</div>
+              <div class="beta-anno-cell" style="width: 42px;"></div>
+              <div class="beta-anno-cell" style="width: 84px; justify-content: center; color: #f39c12; font-size: 0.8em;">grasp</div>
+              <div class="beta-anno-cell" style="width: 42px;"></div>
+              <div class="beta-anno-cell" style="width: 168px; justify-content: center; color: #27ae60; font-size: 0.8em;">lift</div>
+              <div class="beta-anno-cell" style="width: 42px;"></div>
+              <div class="beta-anno-cell" style="width: 84px; justify-content: center; color: #3498db; font-size: 0.8em;">place</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== TEMPORAL CONTRACTION + DEPLOYMENT ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+
+        <!-- Temporal Contraction -->
+        <h2 class="title is-3">Temporal Contraction</h2>
+        <div class="content has-text-justified">
+          <p>
+            Internal RL's key advantage: instead of making a decision at every timestep (standard RL),
+            the policy acts only at switching points where &beta;<sub>t</sub> fires.
+            This dramatically reduces the search space and improves credit assignment.
+          </p>
+        </div>
+
+        <div class="columns">
+          <div class="column">
+            <div class="box contraction-box standard has-text-centered">
+              <p class="heading">Standard RL</p>
+              <p class="title is-2 has-text-danger">T = 50</p>
+              <p class="subtitle is-6">decisions per episode<br>(every timestep)</p>
+            </div>
+          </div>
+          <div class="column">
+            <div class="box contraction-box temporal has-text-centered">
+              <p class="heading">Internal RL</p>
+              <p class="title is-2 has-text-success">M = 4</p>
+              <p class="subtitle is-6">decisions per episode<br>(switching points only)</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="has-text-centered is-size-5 has-text-weight-semibold has-text-success" style="margin-bottom: 2rem;">
+          12.5&times; reduction in search space &rarr; dramatically lower gradient variance
+        </p>
+
+        <hr>
+
+        <!-- Deployment Pipeline -->
+        <h2 class="title is-3">Deployment Pipeline</h2>
+        <div class="content has-text-justified">
+          <p>
+            At deployment, the learned boundary predictor serves two simultaneous purposes:
+            a static capability-aware prior for efficient prompting, and a dynamic runtime re-planning trigger
+            for robustness.
+          </p>
+        </div>
+
+        <div class="deploy-flow">
+          <div class="deploy-step">
+            <div class="step-icon" style="background: #3498db;">1</div>
+            <div class="step-content">
+              <h4>User Instruction</h4>
+              <p>"Make a cup of coffee"</p>
+            </div>
+          </div>
+          <div class="deploy-step">
+            <div class="step-icon" style="background: #f39c12;">2</div>
+            <div class="step-content">
+              <h4>VLM + Capability-Aware Prompt</h4>
+              <p>
+                The VLM receives a system prompt encoding the expert's learned capability profile,
+                generating all subtasks at once at the appropriate granularity.
+              </p>
+            </div>
+          </div>
+          <div class="deploy-step">
+            <div class="step-icon" style="background: #27ae60;">3</div>
+            <div class="step-content">
+              <h4>Sequential Execution with &beta;<sub>t</sub> Monitoring</h4>
+              <p>
+                For each subtask: Action Expert + MetaController execute while monitoring &beta;<sub>t</sub>.
+                Normal completion (&beta;<sub>t</sub> &rarr; 1 at expected time) proceeds to next subtask.
+              </p>
+            </div>
+          </div>
+          <div class="deploy-step">
+            <div class="step-icon" style="background: #e74c3c;">4</div>
+            <div class="step-content">
+              <h4>Runtime Re-Planning (if needed)</h4>
+              <p>
+                If &beta;<sub>t</sub> fires early or the expert's internal state deviates,
+                a re-planning request is sent to the VLM for finer-grained decomposition.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== KEY DESIGN INSIGHTS ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Key Design Insights</h2>
+        <div class="content has-text-justified">
+          <ol>
+            <li>
+              <strong>Frozen expert is critical.</strong>
+              Co-training the action expert with the MetaController causes temporal abstractions to collapse.
+              Freezing &theta; creates an information bottleneck that forces &beta;<sub>t</sub> to capture
+              genuine temporal structure.
+            </li>
+            <li>
+              <strong>Embodiment-invariant temporal boundaries.</strong>
+              The temporal boundary pattern (reach &rarr; grasp &rarr; lift &rarr; place) is shared across embodiments,
+              enabling pretraining on virtually unlimited human data
+              (~10<sup>8</sup> samples vs ~10<sup>5</sup> robot trajectories).
+            </li>
+            <li>
+              <strong>Residual stream intervention, not weight modification.</strong>
+              The MetaController applies additive control on residual streams:
+              e' = e + U&middot;e. This adds only ~2M parameters on top of the frozen 311M expert.
+            </li>
+            <li>
+              <strong>Non-causal to causal transition.</strong>
+              Expert Distill uses a non-causal BiGRU (sees future) for optimal boundary discovery.
+              Optimize replaces this with a causal GRU for online execution where the future is unavailable.
+            </li>
+            <li>
+              <strong>Dual deployment mechanism.</strong>
+              Static capability-aware prompting for efficiency (all subtasks generated at once)
+              + dynamic &beta;<sub>t</sub> monitoring for robustness (graceful degradation when initial decomposition is imperfect).
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== RELATED WORK ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Related Work</h2>
+        <div class="content has-text-justified">
+
+          <h3 class="title is-4">Vision-Language-Action Models</h3>
+          <p>
+            RT-2, &pi;<sub>0</sub>, &pi;<sub>0.5</sub>, OpenVLA, and Octo have advanced VLA capabilities,
+            but all treat the subtask-action interface as a fixed design choice.
+            None learns or adapts it from data or the action expert's capabilities.
+          </p>
+
+          <h3 class="title is-4">Temporal Abstraction &amp; Hierarchical RL</h3>
+          <p>
+            The Options framework, Option-Critic, HIRO, and CompILE address temporal abstraction in RL.
+            Most recently, Kobayashi et al. (2025) proposed Internal RL, showing that a MetaController
+            trained on a frozen autoregressive model's residual stream discovers temporal abstractions
+            aligned with ground-truth subgoals. We extend this from gridworld/MuJoCo to VLA action experts.
+          </p>
+
+          <h3 class="title is-4">Learning from Human Data</h3>
+          <p>
+            LAPA, MT-&pi;, and Being-H0 transfer low-level actions or visual features from human data.
+            We transfer <em>temporal abstraction structure</em>, which is more abstract and therefore
+            more embodiment-invariant.
+          </p>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== BIBTEX ===== -->
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@article{temporal2025,
+  title     = {TempoRAL: Discovering Action-Expert-Aware Subtask
+               Boundaries via Internal Reinforcement Learning
+               on Human Temporal Abstractions},
+  author    = {Anonymous},
+  journal   = {Under Review},
+  year      = {2025}
+}</code></pre>
+  </div>
+</section>
+
+
+<!-- ===== REFERENCES ===== -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">References</h2>
+        <div class="content references">
+          <ol>
+            <li>Physical Intelligence. <em>&pi;<sub>0</sub>: A Vision-Language-Action Flow Model for General Robot Control.</em> arXiv:2410.24164, 2024.</li>
+            <li>Physical Intelligence. <em>&pi;<sub>0.5</sub>: A Vision-Language-Action Model with Open-World Generalization.</em> 2025.</li>
+            <li>Physical Intelligence. <em>&pi;<sub>0</sub>-FAST: Efficient Action Tokenization for Vision-Language-Action Models.</em> 2025.</li>
+            <li>Physical Intelligence. <em>Emergent Cross-Embodiment Alignment in Scaled VLA Models.</em> Blog post, 2025.</li>
+            <li>S. Kobayashi et al. <em>Emergent temporal abstractions in autoregressive models enable hierarchical reinforcement learning.</em> arXiv:2512.20605, 2025.</li>
+            <li>A. Brohan et al. <em>RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control.</em> arXiv:2307.15818, 2023.</li>
+            <li>M. Kim et al. <em>OpenVLA: An Open-Source Vision-Language-Action Model.</em> arXiv:2406.09246, 2024.</li>
+            <li>Octo Model Team. <em>Octo: An Open-Source Generalist Robot Policy.</em> arXiv:2405.12213, 2024.</li>
+            <li>Open X-Embodiment Collaboration. <em>Open X-Embodiment: Robotic Learning Datasets and RT-X Models.</em> arXiv:2310.08864, 2023.</li>
+            <li>K. Grauman et al. <em>Ego4D: Around the World in 3,000 Hours of Egocentric Video.</em> CVPR, 2022.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            This website is licensed under a
+            <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+          </p>
+          <p>
+            Website template borrowed from <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+</body>
+</html>

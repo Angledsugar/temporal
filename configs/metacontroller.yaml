@@ -1,0 +1,20 @@
+# Stage 2: Metacontroller (Table A9)
+metacontroller:
+  latent_dim: 8
+  gru_dim: 32
+  seq_embed_dim: 32
+  encoder_hidden: 64
+  decoder_hidden: 32
+  controller_rank: 16
+  controlled_layer: 3
+  kl_alpha: 0.17
+  obs_coeff: 0.0
+  train_steps: 64000
+  batch_size: 512
+  lr: 1.0e-3
+  weight_decay: 0.03
+
+seed: 0
+data_dir: "data"
+checkpoint_dir: "checkpoints"
+log_dir: "logs"

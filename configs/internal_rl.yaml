@@ -1,0 +1,35 @@
+# Stage 3: Internal RL (Table A13)
+base_model:
+  embed_dim: 256
+  num_layers: 6
+  num_heads: 4
+  head_dim: 64
+  mlp_dim: 512
+  obs_dim: 637
+  num_actions: 4
+  max_seq_len: 100
+
+metacontroller:
+  latent_dim: 8
+  gru_dim: 32
+  seq_embed_dim: 32
+  encoder_hidden: 64
+  decoder_hidden: 32
+  controller_rank: 16
+  controlled_layer: 3
+
+internal_rl:
+  policy_type: "ssm"
+  policy_depth: 1
+  policy_embed_dim: 256
+  beta_threshold: 0.5
+  train_steps: 100000
+  batch_size: 1024
+  lr: 3.0e-5
+  weight_decay: 0.0
+  entropy_coeff: 0.0
+  clip_epsilon: 0.2
+
+seed: 0
+checkpoint_dir: "checkpoints"
+log_dir: "logs"

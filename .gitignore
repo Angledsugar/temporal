@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Data (large files)
+data/*.npz
+
+# Checkpoints and logs
+checkpoints/
+logs/
+results/*.pt

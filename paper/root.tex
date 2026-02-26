@@ -1,0 +1,648 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%2345678901234567890123456789012345678901234567890123456789012345678901234567890
+%        1         2         3         4         5         6         7         8
+
+\documentclass[letterpaper, 10 pt, conference]{ieeeconf}  % Comment this line out if you need a4paper
+
+%\documentclass[a4paper, 10pt, conference]{ieeeconf}      % Use this line for a4 paper
+
+\IEEEoverridecommandlockouts                              % This command is only needed if 
+                                                          % you want to use the \thanks command
+
+\overrideIEEEmargins                                      % Needed to meet printer requirements.
+
+%In case you encounter the following error:
+%Error 1010 The PDF file may be corrupt (unable to open PDF file) OR
+%Error 1000 An error occurred while parsing a contents stream. Unable to analyze the PDF file.
+%This is a known problem with pdfLaTeX conversion filter. The file cannot be opened with acrobat reader
+%Please use one of the alternatives below to circumvent this error by uncommenting one or the other
+%\pdfobjcompresslevel=0
+%\pdfminorversion=4
+
+% See the \addtolength command later in the file to balance the column lengths
+% on the last page of the document
+
+% The following packages can be found on http:\\www.ctan.org
+%\usepackage{graphics} % for pdf, bitmapped graphics files
+%\usepackage{epsfig} % for postscript graphics files
+%\usepackage{mathptmx} % assumes new font selection scheme installed
+%\usepackage{times} % assumes new font selection scheme installed
+%\usepackage{amsmath} % assumes amsmath package installed
+%\usepackage{amssymb}  % assumes amsmath package installed
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{censor}
+
+\title{\LARGE \bf
+TempoRAL: Cross-Embodiment Temporal Abstraction Transfer\\from Human Demonstrations via Internal Reinforcement\\Learning in VLM Backbones
+}
+
+
+\author{Anonymous Author$^{1}$% <-this % stops a space
+%\thanks{*This work was not supported by any organization}% <-this % stops a space
+\thanks{$^{1}$Anonymous Institution}%
+}
+
+
+\begin{document}
+
+
+
+\maketitle
+\thispagestyle{empty}
+\pagestyle{empty}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+
+Vision-Language-Action (VLA) systems such as $\pi_{0.5}$ and GR00T adopt hierarchical architectures in which a Vision-Language Model (VLM) backbone decomposes instructions into subtasks executed by an action expert.
+We hypothesise that the VLM backbone---an autoregressive, causal transformer---develops \emph{temporally-abstract representations} of manipulation subtasks in its residual stream, and that these representations are \textbf{embodiment-invariant}: a human grasping a cup and a robot grasping a cup share the same reach--approach--close--lift boundary pattern despite vastly different kinematics.
+Building on this insight we propose \textbf{TempoRAL}, a three-phase framework:
+(1)~fine-tune the VLM backbone on human manipulation demonstrations so that manipulation-specific temporal structure is encoded in its internal representations, then freeze;
+(2)~train a self-supervised meta-controller on the frozen VLM backbone's residual stream to discover subtask boundaries without any annotation; and
+(3)~apply Internal Reinforcement Learning in the discovered abstract-action space so that a causal policy can compose novel subtask sequences for new tasks under sparse rewards.
+A key ablation compares a base VLM (pretrained only) against a human-data-fine-tuned VLM, isolating the contribution of human demonstrations to temporal abstraction formation.
+We argue that this constitutes a novel form of \emph{temporal abstraction transfer}---going beyond the representation-level cross-embodiment alignment reported in prior work to transfer the \emph{temporal structure} of manipulation from humans to robots.
+
+\end{abstract}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{INTRODUCTION}
+
+%%% Background and motivation
+Recent Vision-Language-Action (VLA) models such as $\pi_0$~\cite{pi0}, $\pi_{0.5}$~\cite{pi05}, and GR00T N1~\cite{groot} have demonstrated that a single policy can generalise across diverse manipulation tasks when conditioned on natural-language instructions.
+These models share a common two-tier architecture: a \emph{VLM backbone}---an autoregressive, causal transformer that processes visual observations and language instructions to form high-level plans---and an \emph{action expert} that translates these plans into low-level motor commands via flow matching or diffusion.
+$\pi_{0.5}$ exemplifies this: its VLM first decomposes an instruction into subtasks (``pick up the cup'', ``place cup under the machine''), which an action expert executes at up to 50\,Hz.
+
+A central yet under-explored question is whether the VLM backbone develops \emph{internal temporal abstractions}---structured representations of when one manipulation subtask ends and another begins---that can be discovered and leveraged without explicit annotation.
+Kobayashi et al.~\cite{internalrl} recently showed that autoregressive models trained on next-token prediction spontaneously develop such temporal abstractions in their residual stream activations.
+A meta-controller---a small hypernetwork that reads from and writes to the residual stream---can discover these abstractions in a purely self-supervised manner: its switching gate $\beta_t$ learns to fire at semantically meaningful boundaries (e.g.\ sub-goal transitions) without any boundary supervision.
+Moreover, performing RL directly in this abstract-action space (``Internal RL'') vastly outperforms token-level RL under sparse rewards.
+
+%%% Key observation: why VLM backbone, not action expert
+A critical prerequisite of this approach is that the base model must be \textbf{autoregressive and causal}---temporal abstractions emerge from sequential next-token prediction over long horizons.
+In VLA systems, this condition is satisfied by the \textbf{VLM backbone} (e.g.\ Eagle-2 for GR00T, PaliGemma for $\pi_0$), which autoregressively processes episode-length observation sequences.
+Conversely, the action expert uses \emph{diffusion or flow matching} with \emph{bidirectional attention} over short action chunks (0.1--1\,s), and therefore cannot form temporal abstractions---it is an executor (``how to move''), not a planner (``what to do next'').
+This distinction is supported by empirical evidence: GR00T N1 found that \emph{middle-layer} VLM embeddings outperform final-layer embeddings for downstream policy success~\cite{groot}, and $\pi_{0.5}$ already predicts subtask text explicitly within the VLM~\cite{pi05}.
+
+%%% Human data hypothesis
+We further hypothesise that \emph{human demonstration data} plays a decisive role in forming manipulation-relevant temporal abstractions within the VLM backbone.
+The temporal boundary structure of manipulation---when one primitive ends and the next begins---is largely \textbf{embodiment-invariant}: a human grasping a cup and a robot grasping a cup share the same reach$\to$approach$\to$close$\to$lift boundary pattern, differing only in low-level kinematics.
+Physical Intelligence's analysis of $\pi_{0.5}$~\cite{pi05_emergent} demonstrated that at sufficient scale, human and robot latent representations spontaneously merge in the VLM's embedding space.
+However, whether this alignment extends to \emph{temporal abstraction}---not just static representations but the \emph{dynamic switching structure} between subtasks---remains unverified.
+
+%%% Contributions
+We propose \textbf{TempoRAL}, a framework that:
+\begin{enumerate}
+  \item \textbf{Fine-tunes} the VLM backbone on human manipulation demonstrations to encode manipulation-specific temporal structure, then \textbf{freezes} it
+    (\S\ref{sec:phase1}).
+  \item \textbf{Discovers} subtask boundaries via a self-supervised meta-controller trained on the frozen VLM backbone's residual stream---requiring no boundary annotations
+    (\S\ref{sec:phase2}).
+  \item \textbf{Optimises} subtask composition through Internal RL in the low-dimensional controller-code space, enabling novel subtask sequences under sparse rewards (\S\ref{sec:phase3}).
+  \item \textbf{Ablates} the contribution of human data by comparing a base VLM (pretrained only) against a human-data-fine-tuned VLM, providing the first quantitative evidence for cross-embodiment \emph{temporal abstraction transfer} (\S\ref{sec:experiments}).
+\end{enumerate}
+
+
+\section{Related Work}
+% ---------- 2.1 ----------
+\subsection{Vision-Language-Action Models}
+The VLA paradigm unifies visual perception, language understanding, and motor control in a single model.
+RT-2~\cite{rt2} first showed that a VLM can be fine-tuned to output robot actions as text tokens.
+$\pi_0$~\cite{pi0} introduced a flow-matching action head, enabling 50\,Hz continuous control alongside a frozen PaliGemma backbone.
+$\pi_{0.5}$~\cite{pi05} extended this with a hierarchical subtask-then-action architecture and demonstrated open-world generalisation.
+$\pi_0$-FAST~\cite{pi0fast} replaced flow matching with FAST tokenisation, achieving 5$\times$ faster training.
+OpenVLA~\cite{openvla} and Octo~\cite{octo} provide open-source alternatives.
+GR00T N1~\cite{groot} introduced per-embodiment MLP adapters around a shared Diffusion Transformer, enabling a single model to control diverse humanoid morphologies without zero-padding.
+All these systems treat the subtask--action interface as a fixed design choice; none exploit the VLM backbone's internal temporal representations to discover subtask boundaries from data.
+
+% ---------- 2.2 ----------
+\subsection{Hierarchical Reinforcement Learning and Temporal Abstraction}
+
+The Options framework~\cite{sutton1999options} formalised temporal abstraction
+in RL as policies with initiation sets, internal policies, and termination
+conditions.
+Option-Critic~\cite{bacon2017option} learns options end-to-end.
+HIRO~\cite{hiro} and HAM~\cite{ham} use goal-conditioned sub-policies.
+CompILE~\cite{compile} discovers segments via variational inference.
+Most recently, \emph{Internal RL}~\cite{internalrl} was proposed showing that a meta-controller trained on a frozen autoregressive model's
+residual stream discovers temporal abstractions that align with ground-truth
+sub-goals---and that RL in the resulting abstract-action space vastly
+outperforms token-level RL under sparse rewards. Internal RL has only been demonstrated in gridworld and MuJoCo
+locomotion; its potential for VLM backbones in VLA systems and real-world robot manipulation is
+unexplored.
+
+% ---------- 2.3 ----------
+\subsection{Learning Robot Policies from Human Data}
+
+Robot demonstration data is scarce ($\sim$10$^5$ trajectories in Open
+X-Embodiment~\cite{openx}) compared to human interaction data ($\sim$10$^8$
+samples in datasets like Ego4D~\cite{ego4d}, UniHand~\cite{beingh0},
+Something-Something V2~\cite{ssv2}).
+LAPA~\cite{lapa} learns latent actions from human videos via a VQ-VAE and
+transfers them to robot control, outperforming OpenVLA while requiring 30$\times$
+less compute.
+MT-$\pi$~\cite{mtpi} uses motion tracks as a cross-embodiment action
+representation, achieving 86.5\% real-world success.
+Being-H0~\cite{beingh0} trains a dexterous VLA on 165\,M human hand samples.
+Physical Intelligence's own analysis of $\pi_{0.5}$ revealed an
+\emph{emergent} alignment between human and robot representations at
+scale~\cite{pi05_emergent}: as model capacity increases, latent clusters for
+human hands and robot grippers spontaneously merge. Prior work transfers \emph{low-level actions} or \emph{visual features}; we transfer the \emph{temporal abstraction structure}---discovered unsupervised from the VLM backbone's residual stream---which is more abstract and therefore more embodiment-invariant.
+Critically, while~\cite{pi05_emergent} showed that human and robot \emph{representations} converge at scale, whether this alignment extends to \emph{temporal abstractions} (the dynamic switching structure between subtasks) remains unverified.
+
+% ---------- 2.4 ----------
+\subsection{Subtask Decomposition and Task Planning}
+
+LLM-based planners such as SayCan~\cite{saycan}, Inner Monologue~\cite{innermonologue},
+and Code-as-Policies~\cite{codeaspolicies} decompose instructions into
+executable steps.
+These approaches typically rely on a \emph{fixed} affordance model or
+success detector to determine granularity.
+Voyager~\cite{voyager} learns a skill library but does not tie decomposition
+to executor capability. No existing method learns the decomposition granularity from the
+\emph{planner's own internal temporal abstractions}.
+
+
+\section{TempoRAL Framework}
+TempoRAL consists of three sequential training phases (Figure~\ref{fig:overview}).
+Throughout, we denote the VLM backbone's parameters as $\theta$, the meta-controller's parameters as $\phi$, and the Internal RL policy's parameters as $\psi$.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\parbox{0.95\linewidth}{\centering\small
+    \textbf{Phase 1} (Fine-tune VLM $\theta$, then freeze) $\;\to\;$
+    \textbf{Phase 2} (Train meta-controller $\phi$; $\theta$ frozen) $\;\to\;$
+    \textbf{Phase 3} (Train RL policy $\psi$; $\theta, \phi$ frozen)
+  }}
+  \caption{Training pipeline of TempoRAL. The VLM backbone is fine-tuned on human demonstrations and frozen; the meta-controller discovers subtask boundaries; Internal RL composes novel subtask sequences.}
+  \label{fig:overview}
+\end{figure}
+
+% ---------- 3.1 PHASE 1 ----------
+\subsection{VLM Backbone Fine-Tuning on Human Demonstration Data}
+\label{sec:phase1}
+
+The goal of Phase~1 is to endow the VLM backbone with manipulation-specific temporal structure by fine-tuning it on human demonstration data, and then \textbf{freezing} it for all subsequent phases.
+
+%%% Why VLM backbone (not action expert)
+We target the VLM backbone rather than the action expert for a fundamental reason: temporal abstractions can only emerge in \emph{autoregressive, causal} models that process long temporal sequences~\cite{internalrl}.
+The VLM backbone (e.g.\ Eagle-2 for GR00T with 28 causal transformer layers, or PaliGemma for $\pi_0$ with 18 causal layers) satisfies this condition---it autoregressively processes episode-length observation-action sequences.
+In contrast, the action expert uses diffusion or flow matching with bidirectional attention over short action chunks (16--50 steps $\approx$ 0.1--1\,s), which cannot form temporal abstractions spanning multi-second subtask transitions.
+
+%%% Why human data
+We argue that human manipulation data is a particularly effective fine-tuning source for three reasons.
+
+\paragraph{Scale}
+Robot demonstration datasets contain on the order of $10^5$ trajectories (e.g.\ Open X-Embodiment~\cite{openx}: 970\,K, BridgeV2: 60\,K), collected via expensive teleoperation.
+Human manipulation datasets are orders of magnitude larger (Ego4D~\cite{ego4d}: 3\,670 hours; YouTube: effectively unbounded) and trivial to collect with commodity cameras.
+
+\paragraph{Embodiment-invariant temporal structure}
+While low-level kinematics differ between a human hand (20+ DoF) and a parallel-jaw gripper (1 DoF), the \emph{temporal boundary structure}---when one manipulation primitive ends and the next begins---is shared.
+Consider a ``pick up cup'' task: both human and robot execute \texttt{reach} $\to$ \texttt{pre-grasp} $\to$ \texttt{close} $\to$ \texttt{lift}, with transitions at kinematically analogous moments (contact initiation, force closure, vertical acceleration).
+This temporal structure is precisely what Phase~2's meta-controller will discover; fine-tuning on human data gives the VLM a richer prior over manipulation boundaries.
+
+\paragraph{Emergent cross-embodiment alignment}
+Recent analysis of $\pi_{0.5}$~\cite{pi05_emergent} demonstrated that at sufficient scale, VLA latent representations of human hands and robot grippers \emph{spontaneously merge} in the VLM's embedding space.
+This provides direct empirical support for the viability of human-data fine-tuning.
+
+%%% Architecture and training
+The VLM backbone is a pretrained causal transformer (e.g.\ Eagle-2 with width $n_e = 2048$, depth 28; or PaliGemma with width $n_e = 2048$, depth 18).
+We fine-tune it on human manipulation demonstrations using next-token prediction over observation-action sequences:
+\begin{equation}
+  \mathcal{L}(\theta) = \sum_{t=1}^{T}
+    \Big[ -\ln p_\theta(a_t \mid o_{1:t})
+    - \lambda \ln p_\theta(o_{t+1} \mid o_{1:t}) \Big]
+  \label{eq:pretrain_loss}
+\end{equation}
+where $o_t$ are visual observations, $a_t$ are actions, and $\lambda \geq 0$ weights an auxiliary observation-prediction loss that encourages world-model formation~\cite{internalrl}.
+Fine-tuning is performed via LoRA~\cite{lora} to keep the number of trainable parameters small ($<$1\% of total), preserving the VLM's pretrained visual-language capabilities while injecting manipulation-specific temporal knowledge.
+
+After this phase, \textbf{$\theta$ is frozen} for all subsequent phases.
+This is a critical design choice inherited from~\cite{internalrl}: co-training the base model and meta-controller causes the temporal abstractions to collapse, as shown by the rate-distortion analysis in the original work.
+
+%%% Ablation design
+To isolate the contribution of human data, we consider multiple conditions:
+\begin{itemize}
+  \item \textbf{Condition A}: Base VLM (pretrained only, no fine-tuning) $\to$ freeze $\to$ Phase~2
+  \item \textbf{Condition B}: VLM + human demonstration fine-tuning $\to$ freeze $\to$ Phase~2
+  \item \textbf{Condition C} (optional): VLM + robot demonstration fine-tuning $\to$ freeze $\to$ Phase~2
+\end{itemize}
+Comparing A vs.\ B isolates whether human data enhances temporal abstraction formation in the VLM backbone.
+Comparing B vs.\ C tests whether human demonstrations produce temporal abstractions that are as effective as (or superior to) robot-specific data---the core of our cross-embodiment transfer hypothesis.
+
+% ---------- 3.2 PHASE 2 ----------
+\subsection{Meta-Controller Training (Self-Supervised)}
+\label{sec:phase2}
+
+The goal of this phase is to discover, from the frozen VLM backbone's
+internal representations, \emph{where subtask boundaries naturally occur}
+---without any boundary annotations.
+
+%%% {Residual Stream Extraction}
+Given a demonstration trajectory $(o_{1:T}, a_{1:T})$, we perform a
+forward pass through the frozen VLM backbone and extract the residual-stream
+activations at a chosen layer $l$:
+\begin{equation}
+  e_{t,l} = \text{ResidualStream}_\theta^{(l)}(o_{1:t})
+  \quad \in \mathbb{R}^{n_e}
+  \label{eq:residual}
+\end{equation}
+where $n_e = 2048$ (the VLM hidden dimension). Based on the findings
+of~\cite{internalrl} and the GR00T N1 middle-layer observation~\cite{groot}, we select $l$ near mid-depth (e.g.\ layer~14 of 28 for Eagle, layer~9 of 18 for PaliGemma).
+Because the VLM backbone is a causal autoregressive transformer, it processes the full episode-length observation sequence---precisely the setting in which temporal abstractions have been shown to emerge~\cite{internalrl}.
+
+%%% {Meta-controller Architecture}
+The meta-controller $\phi$ consists of three components, following the architecture of~\cite{internalrl}:
+\paragraph{Encoder (bidirectional GRU)}
+A recurrent encoder processes the \emph{full} sequence of VLM residual-stream
+activations (non-causal access, using future information) to produce per-timestep
+latent statistics:
+\begin{align}
+  h_t &= \text{BiGRU}_\phi(e_{1:T,l}) \\
+  \mu_t &= W_\mu\, h_t + b_\mu \quad \in \mathbb{R}^{n_z} \\
+  \sigma_t^2 &= \text{softplus}(W_\sigma\, h_t + b_\sigma) \quad \in \mathbb{R}^{n_z} \\
+  \tilde{z}_t &\sim \mathcal{N}(\mu_t,\, \text{diag}(\sigma_t^2))
+  \label{eq:encoder}
+\end{align}
+where $n_z \ll n_e$ is the controller-code dimension (typically $n_z = 32$).
+Non-causal encoding during Phase~2 is justified by the variational
+information-theoretic argument of~\cite{internalrl}: conditioning on the future
+allows the encoder to discover boundaries that \emph{anticipate} upcoming
+transitions.
+
+\paragraph{Switching Unit}
+A continuous gate $\beta_t \in [0,1]$ determines whether to adopt a new
+controller code or persist with the previous one:
+\begin{align}
+  \beta_t &= \sigma\!\left(W_\beta\,[e_{t,l};\, h_t;\, z_{t-1}] + b_\beta\right) \\
+  z_t &= \beta_t \odot \tilde{z}_t + (1 - \beta_t) \odot z_{t-1}
+  \label{eq:switching}
+\end{align}
+When $\beta_t \approx 0$ the previous controller is maintained (same subtask);
+when $\beta_t \approx 1$ a fresh controller code is sampled (subtask boundary).
+A central finding of~\cite{internalrl} is that $\beta_t$ learns quasi-binary,
+sparse switching patterns \emph{without explicit regularisation}, aligned with
+ground-truth sub-goal changes.
+
+\paragraph{Decoder (hypernetwork)}
+The controller code $z_t$ is decoded into a low-rank linear controller
+$U_t \in \mathbb{R}^{n_e \times n_e}$ that modifies the residual stream via
+an additive intervention:
+
+\begin{align}
+U_t &= B_t A_t \\
+B_t &= f_B(z_t) \qquad & (B_t \in \mathbb{R}^{n_e \times r}) \\
+A_t &= f_A(z_t) \qquad & (A_t \in \mathbb{R}^{r \times n_e}) \\
+e'_{t,l} &= e_{t,l} + U_t e_{t,l}
+\label{eq:decoder}
+\end{align}
+
+where $r \ll n_e$ is the rank (typically $r = 32$) and $f_B, f_A$ are learned
+linear maps. This factorisation keeps the number of trainable parameters small
+($\sim$2\,M) relative to the frozen VLM backbone (1.7--2\,B parameters).
+
+%%% {Training Objective}
+The meta-controller is trained by minimising a variational lower bound on the action-prediction log-likelihood under the controlled VLM residual stream:
+\begin{equation}
+\begin{aligned}
+\mathcal{L}(\phi)
+&= \sum_{t=1}^{T} \Big[
+  \underbrace{-\ln p_{\theta,\phi}(a_t \mid o_{1:t}, z_{1:t})}_{\text{action prediction}}
+\\
+&\qquad\qquad
+  + \alpha\;
+  \underbrace{D_{\text{KL}}\!\big(\mathcal{N}(\mu_t, \sigma_t^2)\,\|\,\mathcal{N}(0, I)\big)}_{\text{prior regularisation}}
+\Big]
+\end{aligned}
+\label{eq:phase2_loss}
+\end{equation}
+
+The hyperparameter $\alpha$ controls the rate--distortion trade-off:
+larger $\alpha$ pushes $z_t$ toward the prior, producing coarser (more abstract) boundaries; smaller $\alpha$ permits finer segmentation.
+
+\paragraph{Frozen VLM backbone is essential}
+If $\theta$ is co-trained with $\phi$, the VLM learns to ``absorb'' the controller's influence, and $\beta_t$ degenerates to uniform
+switching~\cite{internalrl}. Freezing $\theta$ creates an information bottleneck that forces $\beta_t$ to capture genuine temporal structure.
+
+
+\subsubsection{Emergent Subtask Boundaries}
+After training, $\beta_t$ exhibits sparse, quasi-binary firing patterns that correspond to manipulation-phase transitions---without any boundary supervision.
+These boundaries reflect the VLM backbone's \emph{internal} notion of ``where one coherent behavioural plan ends and another begins'', which is precisely the temporal abstraction structure we aim to discover and transfer across embodiments.
+
+
+% ---------- 3.3 PHASE 3 ----------
+\subsection{Internal RL for Novel Task Composition}
+\label{sec:phase3}
+Phase~2 discovers temporal boundaries in a self-supervised manner, but does not optimise them for \emph{task success}.
+Phase~3 closes this loop by treating the entire VLA system (VLM backbone + meta-controller + action expert + environment) as the environment and applying RL in the abstract controller-code space.
+
+%%% {Internal Environment}
+We construct an ``internal'' MDP whose state and action spaces live inside the VLM backbone's representations:
+\begin{align}
+  \text{State:} \quad & o_t^{\text{int}} = e_{t,l}
+    \quad \text{(VLM residual stream at layer } l\text{)} \\
+  \text{Action:} \quad & z_t \in \mathbb{R}^{n_z}
+    \quad \text{(controller code)} \\
+  \text{Reward:} \quad & r_t =
+    \begin{cases}
+      1 & \text{if task completed successfully} \\
+      0 & \text{otherwise}
+    \end{cases}
+  \label{eq:internal_mdp}
+\end{align}
+The ``environment dynamics'' are the composition of:
+(i)~the decoder producing $U_t$ from $z_t$,
+(ii)~the frozen VLM backbone propagating the controlled residual stream to the action expert,
+(iii)~the action expert generating motor commands,
+and (iv)~the physical (or simulated) world executing those commands.
+From the RL agent's perspective, all of this is a black box that maps $z_t$ to $(o_{t+1}^{\text{int}}, r_t)$.
+
+%%% {Binarised Switching}
+During Phase~3 the continuous $\beta_t$ is discretised via a Heaviside step function:
+\begin{equation}
+  \beta_t^{\text{bin}} = H(\beta_t - \beta_{\text{thresh}})
+  \label{eq:binarize}
+\end{equation}
+When $\beta_t^{\text{bin}} = 0$, the previous $z_{t-1}$ is reused and the RL policy is \emph{not queried}---the VLM backbone continues with the same abstract action.
+When $\beta_t^{\text{bin}} = 1$, the RL policy emits a new $z_t$.
+This achieves \textbf{temporal contraction}: if a trajectory of $T$ primitive steps has $M$ switch points ($M \ll T$), the RL policy makes only $M$ decisions, drastically reducing the search space and improving credit assignment.
+
+%%% {Causal Policy}
+The non-causal BiGRU encoder from Phase~2 is replaced by a \emph{causal} policy $\pi_\psi$ that can only observe past and present:
+\begin{equation}
+  z_t \sim \pi_\psi(z_t \mid e_{1:t,l})
+  \label{eq:causal_policy}
+\end{equation}
+implemented as a causal GRU followed by a Gaussian policy head. The decoder (hypernetwork) weights from Phase~2 are reused and frozen; only $\psi$ is trained.
+
+%%% {Policy Gradient}
+We optimize $\psi$ via policy gradient with relative advantage estimation:
+\begin{equation}
+  \nabla_\psi J =
+    \mathbb{E}\!\left[
+      \sum_{m=1}^{M} A_m \;\nabla_\psi \ln \pi_\psi(z_{t_m} \mid e_{1:t_m,l})
+    \right]
+  \label{eq:policy_grad}
+\end{equation}
+where $\{t_1, \ldots, t_M\}$ are the switch points and $A_m$ is the advantage at switch $m$. Because $M$ is small (typically 3--8 per episode), the gradient variance is dramatically lower than token-level policy gradients, which is the key advantage of Internal RL over standard RL fine-tuning.
+
+%%% {What Phase 3 Learns}
+The RL policy learns to emit controller codes $z_t$ that compose manipulation subtasks in novel sequences: each $z_t$ steers the VLM backbone's planning representation through a coherent manipulation phase, and a switch is triggered precisely when a new subtask should begin.
+Because $z_t$ operates in the VLM's abstract planning space rather than in the raw action space, novel combinations of subtasks---including sequences not seen during pretraining---become reachable through compositional generalisation in the controller-code space~\cite{internalrl}.
+
+% Deployment section moved to future work in Conclusions
+
+
+\section{PROPOSED EXPERIMENTS}
+\label{sec:experiments}
+
+We outline the experimental protocol designed to validate our hypothesis that human demonstration data induces transferable temporal abstractions in VLM backbones.
+
+\subsection{Experimental Setup}
+
+\paragraph{VLM backbones}
+We target two VLA architectures:
+(1)~GR00T N1.6 with Eagle-2 VLM (Qwen3-1.7B, 28 layers, $n_e = 2048$), and
+(2)~$\pi_0$ with PaliGemma VLM (Gemma 2B, 18 layers, $n_e = 2048$).
+For cost-effective validation, we also consider Qwen2.5-VL-7B (28 layers, $n_e = 3584$) with LoRA fine-tuning.
+
+\paragraph{Human demonstration data}
+Egocentric manipulation videos with extracted end-effector trajectories via 3D hand tracking.
+Each trajectory is an observation-action sequence $(o_{1:T}, a_{1:T})$ where $o_t$ is a camera frame and $a_t$ is the hand/end-effector pose.
+
+\paragraph{Meta-controller configuration}
+Controller-code dimension $n_z = 16$, hypernetwork rank $r = 32$, intervention at mid-depth (layer $l = L/2$), KL weight $\alpha$ swept over $[0.001, 0.1]$.
+
+\subsection{Ablation: Base VLM vs.\ Human-Fine-Tuned VLM}
+
+The central experiment compares three conditions on the same meta-controller training pipeline:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Condition} & \textbf{VLM state} & \textbf{Fine-tune data} \\
+\midrule
+A (Base)     & Pretrained only & None \\
+B (Human)    & + LoRA fine-tune & Human demonstrations \\
+C (Robot)    & + LoRA fine-tune & Robot demonstrations \\
+\bottomrule
+\end{tabular}
+\caption{Ablation conditions for isolating the contribution of human data to temporal abstraction formation.}
+\label{tab:ablation}
+\end{table}
+
+\paragraph{Metric 1: Linear probing accuracy}
+For each condition, we train linear classifiers on the frozen VLM's residual stream at each layer to decode the current ground-truth subtask label.
+Higher mid-layer probing accuracy indicates richer temporal abstraction representations~\cite{internalrl}.
+
+\paragraph{Metric 2: $\beta_t$ alignment with subtask boundaries}
+We measure the alignment between the meta-controller's switching gate $\beta_t$ and ground-truth subtask transition times using normalised mutual information (NMI).
+Sparse, quasi-binary $\beta_t$ patterns aligned with true transitions indicate successful temporal abstraction discovery.
+
+\paragraph{Metric 3: Internal RL success rate}
+For post-training tasks---novel subtask sequences not seen during pre-training or meta-controller training---we compare the success rate of Internal RL across conditions A, B, and C.
+Following~\cite{internalrl}, we also compare against raw-action RL (GRPO) and Internal RL without temporal abstraction ($\beta_t = 1$ forced) as baselines.
+
+\subsection{Expected Outcomes}
+
+\begin{itemize}
+  \item \textbf{A $<$ B}: Human fine-tuning significantly improves temporal abstraction quality, validating that human data encodes manipulation-relevant temporal structure in the VLM backbone.
+  \item \textbf{B $\approx$ C}: Human and robot demonstrations produce comparable temporal abstractions, providing strong evidence for \emph{cross-embodiment temporal abstraction transfer}.
+  \item \textbf{B $>$ C}: If human data yields \emph{superior} temporal abstractions (due to greater data diversity or more natural manipulation structure), this would constitute a particularly strong contribution.
+\end{itemize}
+
+Any of these outcomes provides novel empirical evidence beyond the representation-level cross-embodiment alignment reported in~\cite{pi05_emergent}, extending it to the \emph{temporal abstraction} level.
+
+
+\section{CONCLUSIONS}
+We presented \textbf{TempoRAL}, a framework that discovers and transfers temporal abstractions from human demonstrations to robot manipulation via the internal representations of VLM backbones.
+Our approach rests on three insights:
+(1)~the VLM backbone---an autoregressive, causal transformer---is the correct site for temporal abstraction discovery in VLA systems, as it satisfies the prerequisites identified by~\cite{internalrl} (unlike the diffusion-based action expert);
+(2)~a meta-controller trained on the frozen VLM backbone's residual stream discovers subtask boundaries without supervision; and
+(3)~Internal RL in the resulting abstract-action space enables compositional generalisation to novel subtask sequences under sparse rewards.
+
+The central hypothesis of this work is that human demonstration data induces manipulation-specific temporal abstractions in the VLM backbone that are \emph{embodiment-invariant}---extending beyond the representation-level cross-embodiment alignment reported in prior work~\cite{pi05_emergent} to the \emph{temporal structure} of manipulation.
+Our proposed ablation (base VLM vs.\ human-fine-tuned VLM vs.\ robot-fine-tuned VLM) is designed to provide the first quantitative evidence for this claim.
+
+\paragraph{Future work}
+Several directions remain.
+First, the meta-controller's $\beta_t$ switching signal could serve as a \emph{runtime re-planning trigger}: when $\beta_t$ fires unexpectedly during deployment, it signals that the current subtask plan has become invalid, enabling the VLM to generate a revised decomposition.
+Second, the learned temporal abstraction structure could be distilled into a capability-aware prompting prior that guides the VLM to generate subtasks at the appropriate granularity without manual prompt engineering.
+Finally, scaling to additional embodiments (e.g.\ quadrupeds, dexterous hands) and validating on diverse hardware platforms is essential to confirm the generality of cross-embodiment temporal abstraction transfer.
+
+\addtolength{\textheight}{-12cm}   % This command serves to balance the column lengths
+                                  % on the last page of the document manually. It shortens
+                                  % the textheight of the last page by a suitable amount.
+                                  % This command does not take effect until the next page
+                                  % so it should come on the page before the last. Make
+                                  % sure that you do not shorten the textheight too much.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{APPENDIX}
+
+Appendixes should appear before the acknowledgment.
+
+\section*{ACKNOWLEDGMENT}
+
+The preferred spelling of the word ÒacknowledgmentÓ in America is without an ÒeÓ after the ÒgÓ. Avoid the stilted expression, ÒOne of us (R. B. G.) thanks . . .Ó  Instead, try ÒR. B. G. thanksÓ. Put sponsor acknowledgments in the unnumbered footnote on the first page.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+References are important to the reader; therefore, each citation must be complete and correct. If at all possible, references should be commonly available publications.
+
+
+
+\begin{thebibliography}{99}
+
+\bibitem{pi0}
+Physical Intelligence.
+\newblock $\pi_0$: A Vision-Language-Action Flow Model for General Robot Control.
+\newblock \emph{arXiv:2410.24164}, 2024.
+
+\bibitem{pi05}
+Physical Intelligence.
+\newblock $\pi_{0.5}$: A Vision-Language-Action Model with Open-World Generalization.
+\newblock 2025.
+
+\bibitem{pi0fast}
+Physical Intelligence.
+\newblock $\pi_0$-FAST: Efficient Action Tokenization for Vision-Language-Action Models.
+\newblock 2025.
+
+\bibitem{pi05_emergent}
+Physical Intelligence.
+\newblock Emergent Cross-Embodiment Alignment in Scaled VLA Models.
+\newblock Blog post, 2025.
+
+\bibitem{internalrl}
+S.~Kobayashi et al.
+\newblock Emergent temporal abstractions in autoregressive models enable hierarchical reinforcement learning.
+\newblock \emph{arXiv:2512.20605}, 2025.
+
+\bibitem{rt2}
+A.~Brohan et al.
+\newblock RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control.
+\newblock \emph{arXiv:2307.15818}, 2023.
+
+\bibitem{openvla}
+M.~Kim et al.
+\newblock OpenVLA: An Open-Source Vision-Language-Action Model.
+\newblock \emph{arXiv:2406.09246}, 2024.
+
+\bibitem{octo}
+Octo Model Team.
+\newblock Octo: An Open-Source Generalist Robot Policy.
+\newblock \emph{arXiv:2405.12213}, 2024.
+
+\bibitem{openx}
+Open X-Embodiment Collaboration.
+\newblock Open X-Embodiment: Robotic Learning Datasets and RT-X Models.
+\newblock \emph{arXiv:2310.08864}, 2023.
+
+\bibitem{ego4d}
+K.~Grauman et al.
+\newblock Ego4D: Around the World in 3,000 Hours of Egocentric Video.
+\newblock \emph{CVPR}, 2022.
+
+\bibitem{beingh0}
+Being-H0 Team.
+\newblock Being-H0: Vision-Language-Action Pretraining from Large-Scale Human Videos.
+\newblock \emph{arXiv:2507.15597}, 2025.
+
+\bibitem{ssv2}
+R.~Goyal et al.
+\newblock The ``Something Something'' Video Database for Learning and Evaluating Visual Common Sense.
+\newblock \emph{ICCV}, 2017.
+
+\bibitem{lapa}
+S.~Edwards et al.
+\newblock Latent Action Pretraining from Videos.
+\newblock \emph{arXiv:2410.11758}, 2024.
+
+\bibitem{mtpi}
+Cornell Team.
+\newblock Motion Tracks: A Unified Representation for Human-Robot Transfer in Few-Shot Imitation Learning.
+\newblock 2025.
+
+\bibitem{sutton1999options}
+R.~Sutton, D.~Precup, and S.~Singh.
+\newblock Between MDPs and semi-MDPs: A Framework for Temporal Abstraction in Reinforcement Learning.
+\newblock \emph{Artificial Intelligence}, 112(1--2):181--211, 1999.
+
+\bibitem{bacon2017option}
+P.-L.~Bacon, J.~Harb, and D.~Precup.
+\newblock The Option-Critic Architecture.
+\newblock \emph{AAAI}, 2017.
+
+\bibitem{hiro}
+O.~Nachum et al.
+\newblock Data-Efficient Hierarchical Reinforcement Learning.
+\newblock \emph{NeurIPS}, 2018.
+
+\bibitem{ham}
+R.~Parr and S.~Russell.
+\newblock Reinforcement Learning with Hierarchies of Machines.
+\newblock \emph{NeurIPS}, 1998.
+
+\bibitem{compile}
+T.~Kipf et al.
+\newblock CompILE: Compositional Imitation Learning and Execution.
+\newblock \emph{ICML}, 2019.
+
+\bibitem{saycan}
+M.~Ahn et al.
+\newblock Do As I Can, Not As I Say: Grounding Language in Robotic Affordances.
+\newblock \emph{arXiv:2204.01691}, 2022.
+
+\bibitem{innermonologue}
+W.~Huang et al.
+\newblock Inner Monologue: Embodied Reasoning through Planning with Language Models.
+\newblock \emph{CoRL}, 2023.
+
+\bibitem{codeaspolicies}
+J.~Liang et al.
+\newblock Code as Policies: Language Model Programs for Embodied Control.
+\newblock \emph{ICRA}, 2023.
+
+\bibitem{voyager}
+G.~Wang et al.
+\newblock Voyager: An Open-Ended Embodied Agent with Large Language Models.
+\newblock \emph{arXiv:2305.16291}, 2023.
+
+\bibitem{groot}
+NVIDIA.
+\newblock GR00T N1: An Open Foundation Model for Generalist Humanoid Robots.
+\newblock \emph{arXiv:2503.14734}, 2025.
+
+\bibitem{lora}
+E.~J.~Hu et al.
+\newblock LoRA: Low-Rank Adaptation of Large Language Models.
+\newblock \emph{ICLR}, 2022.
+
+\end{thebibliography}
+
+
+
+
+\end{document}
