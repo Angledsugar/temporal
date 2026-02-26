@@ -16,3 +16,6 @@ data/*.npz
 checkpoints/
 logs/
 results/*.pt
+
+paper/
+reference/
